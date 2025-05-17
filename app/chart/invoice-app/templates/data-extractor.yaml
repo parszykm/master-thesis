@@ -3,7 +3,6 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: data-extractor
-  namespace: {{ .Values.global.namespace }}
 spec:
   replicas: 1
   selector:
@@ -13,6 +12,10 @@ spec:
     metadata:
       labels:
         app: data-extractor
+      annotations:
+{{- if .Values.istio.enabled }}
+        "sidecar.istio.io/inject": "true"
+{{- end }}
     spec:
       containers:
       - name: flask-api
@@ -27,7 +30,6 @@ apiVersion: v1
 kind: Service
 metadata:
   name: data-extractor-service
-  namespace: {{ .Values.global.namespace }}
 spec:
   selector:
     app: data-extractor

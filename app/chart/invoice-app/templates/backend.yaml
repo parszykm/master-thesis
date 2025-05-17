@@ -1,10 +1,8 @@
 ---
-
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: backend
-  namespace: {{ .Values.global.namespace }}
 spec:
   replicas: {{ .Values.backend.replicas }}
   selector:
@@ -14,31 +12,89 @@ spec:
     metadata:
       labels:
         app: backend
+      annotations:
+{{- if .Values.istio.enabled }}
+        "sidecar.istio.io/inject": "true"
+{{- end }}
     spec:
       containers:
-      - name: backend
-        image: {{ .Values.backend.image.repository }}:{{ .Values.backend.image.tag }}
-        imagePullPolicy: {{ .Values.global.imagePullPolicy }}
-        ports:
-        - containerPort: {{ .Values.backend.port }}
-        env:
-        - name: REDIS_URL
-          value: redis://redis:{{ .Values.redis.port }}/0
-        - name: OCR_URL
-          value: http://ocr-service:{{ .Values.ocrService.port }}/ocr
-        - name: EXTRACTOR_URL
-          value: http://data-extractor-service:{{ .Values.dataExtractor.port }}/generate
+        - name: backend
+          image: {{ .Values.backend.image.repository }}:{{ .Values.backend.image.tag }}
+          imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+          ports:
+            - containerPort: {{ .Values.backend.port }}
+          env:
+            - name: REDIS_URL
+              value: redis://redis:{{ .Values.redis.port }}/0
+            - name: OCR_URL
+              value: http://ocr-service:{{ .Values.ocrService.port }}/ocr
+            - name: EXTRACTOR_URL
+              value: http://data-extractor-service:{{ .Values.dataExtractor.port }}/generate
 ---
+# apiVersion: v1
+# kind: Service
+# metadata:
+#   name: backend-service
+#   namespace: {{ .Release.Namespace }}
+# spec:
+#   type: NodePort
+#   selector:
+#     app: backend
+#   ports:
+#     - port: {{ .Values.backend.servicePort }}
+#       targetPort: {{ .Values.backend.port }}
+#       protocol: TCP
+#       nodePort: {{ .Values.backend.nodePort | default 32000 }}
+
+
 apiVersion: v1
 kind: Service
 metadata:
   name: backend-service
-  namespace: {{ .Values.global.namespace }}
+  namespace: {{ .Release.Namespace }}
 spec:
+  type: {{ if .Values.istio.enabled }}ClusterIP{{ else }}LoadBalancer{{ end }}
   selector:
     app: backend
   ports:
-    - protocol: TCP
-      port: {{ .Values.backend.servicePort }}
+    - port: {{ .Values.backend.servicePort }}
       targetPort: {{ .Values.backend.port }}
-  type: ClusterIP
+      protocol: TCP
+---
+{{- if .Values.istio.enabled }}
+apiVersion: networking.istio.io/v1beta1
+kind: Gateway
+metadata:
+  name: backend-gateway
+  namespace: {{ .Release.Namespace }}
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+    - port:
+        number: 80
+        name: http
+        protocol: HTTP
+      hosts:
+        - "*"
+---
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: backend
+  namespace: {{ .Release.Namespace }}
+spec:
+  hosts:
+    - "*"
+  gateways:
+    - backend-gateway
+  http:
+    - match:
+        - uri:
+            prefix: /
+      route:
+        - destination:
+            host: backend-service
+            port:
+              number: {{ .Values.backend.servicePort }}
+{{- end }}

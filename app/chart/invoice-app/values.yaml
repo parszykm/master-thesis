@@ -1,6 +1,8 @@
 global:
   imagePullPolicy: IfNotPresent
-  namespace: default
+
+istio:
+  enabled: false
 
 backend:
   image:
@@ -8,6 +10,7 @@ backend:
     tag: latest
   replicas: 1
   port: 8080
+  nodePort: 30030
   servicePort: 8081
 
 worker:

@@ -3,7 +3,6 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: backend-worker
-  namespace: {{ .Values.global.namespace }}
 spec:
   replicas: {{ .Values.worker.replicas }}
   selector:
@@ -13,6 +12,10 @@ spec:
     metadata:
       labels:
         app: backend-worker
+      annotations:
+{{- if .Values.istio.enabled }}
+        "sidecar.istio.io/inject": "true"
+{{- end }}
     spec:
       containers:
       - name: worker
