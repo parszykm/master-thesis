@@ -1,0 +1,45 @@
+global:
+  imagePullPolicy: IfNotPresent
+  namespace: default
+
+backend:
+  image:
+    repository: parszyk/backend
+    tag: latest
+  replicas: 1
+  port: 8080
+  servicePort: 8081
+
+worker:
+  image:
+    repository: parszyk/backend
+    tag: latest
+  replicas: 1
+
+redis:
+  image:
+    repository: redis
+    tag: "7"
+  port: 6379
+
+ocrService:
+  image:
+    repository: parszyk/ocr-service
+    tag: latest
+  port: 9090
+
+dataExtractor:
+  image:
+    repository: parszyk/data-extractor
+    tag: latest
+  port: 8000
+
+ollama:
+  image:
+    repository: ollama/ollama
+    tag: latest
+  port: 11434
+  replicas: 2
+  pvc:
+    size: 5Gi
+  initModel: sroecker/nuextract-tiny-v1.5

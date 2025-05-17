@@ -1,0 +1,98 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ollama
+  namespace: {{ .Values.global.namespace }}
+spec:
+  replicas: {{ .Values.ollama.replicas }}
+  selector:
+    matchLabels:
+      app: ollama
+  template:
+    metadata:
+      labels:
+        app: ollama
+    spec:
+      containers:
+      - name: ollama
+        image: {{ .Values.ollama.image.repository }}:{{ .Values.ollama.image.tag }}
+        ports:
+        - containerPort: {{ .Values.ollama.port }}
+        volumeMounts:
+        - name: ollama-storage
+          mountPath: /root/.ollama
+      volumes:
+      - name: ollama-storage
+        persistentVolumeClaim:
+          claimName: ollama-pvc
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: ollama-init
+  namespace: {{ .Values.global.namespace }}
+spec:
+  template:
+    spec:
+      containers:
+      - name: ollama-init
+        image: {{ .Values.ollama.image.repository }}:{{ .Values.ollama.image.tag }}
+        volumeMounts:
+        - name: ollama-storage
+          mountPath: /root/.ollama
+        - name: script-volume
+          mountPath: /scripts
+        command: ["sh", "-c", "/scripts/entrypoint.sh"]
+      restartPolicy: OnFailure
+      volumes:
+      - name: ollama-storage
+        persistentVolumeClaim:
+          claimName: ollama-pvc
+      - name: script-volume
+        configMap:
+          name: ollama-entrypoint-cm
+          defaultMode: 0500
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ollama-entrypoint-cm
+  namespace: {{ .Values.global.namespace }}
+data:
+  entrypoint.sh: |
+    #!/bin/bash
+    /bin/ollama serve &
+    pid=$!
+    sleep 5
+    echo "🔴 Retrieve {{ .Values.ollama.initModel }} model..."
+    ollama pull {{ .Values.ollama.initModel }}
+    echo "🟢 Done!"
+    wait $pid
+    exit 0
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ollama-pvc
+  namespace: {{ .Values.global.namespace }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.ollama.pvc.size }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ollama-service
+  namespace: {{ .Values.global.namespace }}
+spec:
+  selector:
+    app: ollama
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: {{ .Values.ollama.port }}
+  type: ClusterIP

@@ -1,0 +1,38 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: data-extractor
+  namespace: {{ .Values.global.namespace }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: data-extractor
+  template:
+    metadata:
+      labels:
+        app: data-extractor
+    spec:
+      containers:
+      - name: flask-api
+        image: {{ .Values.dataExtractor.image.repository }}:{{ .Values.dataExtractor.image.tag }}
+        ports:
+        - containerPort: {{ .Values.dataExtractor.port }}
+        env:
+        - name: OLLAMA_URL
+          value: "http://ollama-service:80"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: data-extractor-service
+  namespace: {{ .Values.global.namespace }}
+spec:
+  selector:
+    app: data-extractor
+  ports:
+    - protocol: TCP
+      port: {{ .Values.dataExtractor.port }}
+      targetPort: {{ .Values.dataExtractor.port }}
+  type: ClusterIP

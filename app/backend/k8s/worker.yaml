@@ -1,0 +1,25 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend-worker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: backend-worker
+  template:
+    metadata:
+      labels:
+        app: backend-worker
+    spec:
+      containers:
+      - name: worker
+        image: parszyk/backend:latest
+        command: ["celery", "-A", "tasks", "worker", "--loglevel=info"]
+        env:
+        - name: REDIS_URL
+          value: redis://redis:6379/0
+        - name: OCR_URL
+          value: http://ocr-service:9090/ocr
+        - name: EXTRACTOR_URL
+          value: http://data-extractor-service:8000/generate

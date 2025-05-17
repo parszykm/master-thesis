@@ -1,0 +1,63 @@
+<|input|>
+### Template:
+{
+  "invoice_number": "",
+  "issue_date": "",
+  "seller": "",
+  "seller_address": "",
+  "seller_tax_id": "",
+  "iban": "",
+  "client": "",
+  "client_address": "",
+  "client_tax_id": "",
+  "items": [
+    {
+      "description": "",
+      "quantity": 0,
+      "unit": ""
+    }
+  ],
+  "vat_rate": "",
+  "net_total": 0,
+  "vat_amount": 0,
+  "gross_total": 0
+}
+
+### Text:
+Invoice no: 81978187
+
+Date of issue:
+
+Seller:
+
+Padilla-Miller  
+53017 Lopez Locks  
+Alecborough, OH 49620
+
+Tax Id: 957-92-5322  
+IBAN: GB91VPMR74805066714957
+
+ITEMS  
+No. Description Qty  
+1. Wine Bottle Holder 5,00  
+2. Cuisinart Stainless Steel Electric Wine Opener - CWO-25 - Brand New in the Box 3,00  
+
+SUMMARY  
+VAT [%]: 10%  
+Total:  
+Net price  
+10,75 53,75  
+19,90 59,70  
+
+Net worth VAT  
+113,45 11,34  
+
+Gross worth: 124,79  
+
+Client:  
+Johnson Ltd  
+86731 Ryan Throughway Suite 743  
+West Jason, CT 15849  
+Tax Id: 922-87-4664
+
+<|output|>

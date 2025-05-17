@@ -1,0 +1,27 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend-worker
+  namespace: {{ .Values.global.namespace }}
+spec:
+  replicas: {{ .Values.worker.replicas }}
+  selector:
+    matchLabels:
+      app: backend-worker
+  template:
+    metadata:
+      labels:
+        app: backend-worker
+    spec:
+      containers:
+      - name: worker
+        image: {{ .Values.worker.image.repository }}:{{ .Values.worker.image.tag }}
+        command: ["celery", "-A", "tasks", "worker", "--loglevel=info"]
+        env:
+        - name: REDIS_URL
+          value: redis://redis:{{ .Values.redis.port }}/0
+        - name: OCR_URL
+          value: http://ocr-service:{{ .Values.ocrService.port }}/ocr
+        - name: EXTRACTOR_URL
+          value: http://data-extractor-service:{{ .Values.dataExtractor.port }}/generate
