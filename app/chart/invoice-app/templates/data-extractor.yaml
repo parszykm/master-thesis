@@ -1,10 +1,53 @@
----
+# ---
+# apiVersion: apps/v1
+# kind: Deployment
+# metadata:
+#   name: data-extractor
+# spec:
+#   replicas: 1
+#   selector:
+#     matchLabels:
+#       app: data-extractor
+#   template:
+#     metadata:
+#       labels:
+#         app: data-extractor
+#       annotations:
+# {{- if .Values.istio.enabled }}
+#         "sidecar.istio.io/inject": "true"
+# {{- end }}
+#     spec:
+#       containers:
+#       - name: flask-api
+#         image: {{ .Values.dataExtractor.image.repository }}:{{ .Values.dataExtractor.image.tag }}
+#         ports:
+#         - containerPort: {{ .Values.dataExtractor.port }}
+#         env:
+#         - name: OLLAMA_URL
+#           value: "http://ollama-service:80"
+# ---
+# apiVersion: v1
+# kind: Service
+# metadata:
+#   name: data-extractor-service
+# spec:
+#   selector:
+#     app: data-extractor
+#   ports:
+#     - protocol: TCP
+#       port: {{ .Values.dataExtractor.port }}
+#       targetPort: {{ .Values.dataExtractor.port }}
+#   type: ClusterIP
+
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: data-extractor
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: data-extractor
 spec:
-  replicas: 1
+  replicas: {{ .Values.dataExtractor.replicas }}
   selector:
     matchLabels:
       app: data-extractor
@@ -12,29 +55,132 @@ spec:
     metadata:
       labels:
         app: data-extractor
-      annotations:
-{{- if .Values.istio.enabled }}
-        "sidecar.istio.io/inject": "true"
-{{- end }}
     spec:
       containers:
-      - name: flask-api
+      - name: data-extractor
         image: {{ .Values.dataExtractor.image.repository }}:{{ .Values.dataExtractor.image.tag }}
+        imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+        env:
+        {{- range $key, $value := .Values.dataExtractor.env }}
+        - name: {{ $key }}
+          value: {{ $value | quote }}
+        {{- end }}
+        - name: POSTGRES_URL
+          value: "http://postgres-service:{{ .Values.postgres.port }}"
         ports:
         - containerPort: {{ .Values.dataExtractor.port }}
-        env:
-        - name: OLLAMA_URL
-          value: "http://ollama-service:80"
 ---
+
 apiVersion: v1
 kind: Service
 metadata:
   name: data-extractor-service
+  namespace: {{ .Release.Namespace }}
 spec:
   selector:
     app: data-extractor
   ports:
-    - protocol: TCP
-      port: {{ .Values.dataExtractor.port }}
-      targetPort: {{ .Values.dataExtractor.port }}
-  type: ClusterIP
+  - protocol: TCP
+    port: {{ .Values.dataExtractor.servicePort }}
+    targetPort: {{ .Values.dataExtractor.port }}
+  type: LoadBalancer
+
+---
+
+{{- if .Values.dataExtractor.hpa.enabled }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: data-extractor-hpa
+  namespace: default
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: data-extractor
+  minReplicas: 1
+  maxReplicas: {{ .Values.dataExtractor.maxReplicas | default 1}}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.ocrService.hpa.cpuTarget | default 80 }} # Scale if CPU usage exceeds 80%
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.ocrService.hpa.memoryTarget | default 80 }} # Scale if memory usage exceeds 80%
+{{- if .Values.cilium.enabled }}
+    - type: Object
+      object:
+        describedObject:
+          apiVersion: apps/v1
+          kind: Deployment
+          name: data-extractor
+        metric:
+          name: hubble_flows_per_pod
+        target:
+          type: Value
+          value: "150m"  # Scale up if flows per pod exceed 0.15 (150 milli)
+    - type: Object
+      object:
+        describedObject:
+          apiVersion: apps/v1
+          kind: Deployment
+          name: data-extractor
+        metric:
+          name: hubble_http_request_latency_p95
+        target:
+          type: Value
+          value: "500m"  # Scale up if 95th percentile latency exceeds 500ms
+    - type: Object
+      object:
+        describedObject:
+          apiVersion: apps/v1
+          kind: Deployment
+          name: data-extractor
+        metric:
+          name: hubble_http_5XX_response_ratio
+        target:
+          type: Value
+          value: "0.01"  # Scale up if 5xx error ratio exceeds 1%
+{{- end }}
+{{- if .Values.istio.enabled }}
+    - type: Object
+      object:
+        describedObject:
+          apiVersion: apps/v1
+          kind: Deployment
+          name: data-extractor
+        metric:
+          name: istio_requests_per_pod
+        target:
+          type: Value
+          value: "150m"  # Scale up if flows per pod exceed 0.15 (150 milli)
+    - type: Object
+      object:
+        describedObject:
+          apiVersion: apps/v1
+          kind: Deployment
+          name: data-extractor
+        metric:
+          name: istio_request_latency_p95
+        target:
+          type: Value
+          value: "500m"  # Scale up if 95th percentile latency exceeds 500ms
+    - type: Object
+      object:
+        describedObject:
+          apiVersion: apps/v1
+          kind: Deployment
+          name: data-extractor
+        metric:
+          name: istio_5xx_error_ratio
+        target:
+          type: Value
+          value: "0.01"  # Scale up if 5xx error ratio exceeds 1%
+{{- end }}
+{{- end }}

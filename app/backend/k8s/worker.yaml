@@ -1,16 +1,16 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: backend-worker
+  name: celery-worker
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: backend-worker
+      app: celery-worker
   template:
     metadata:
       labels:
-        app: backend-worker
+        app: celery-worker
     spec:
       containers:
       - name: worker

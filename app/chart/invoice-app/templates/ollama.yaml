@@ -1,97 +1,104 @@
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: ollama
-spec:
-  replicas: {{ .Values.ollama.replicas }}
-  selector:
-    matchLabels:
-      app: ollama
-  template:
-    metadata:
-      labels:
-        app: ollama
-      annotations:
-{{- if .Values.istio.enabled }}
-        "sidecar.istio.io/inject": "true"
-{{- end }}
-    spec:
-      containers:
-      - name: ollama
-        image: {{ .Values.ollama.image.repository }}:{{ .Values.ollama.image.tag }}
-        ports:
-        - containerPort: {{ .Values.ollama.port }}
-        volumeMounts:
-        - name: ollama-storage
-          mountPath: /root/.ollama
-      volumes:
-      - name: ollama-storage
-        persistentVolumeClaim:
-          claimName: ollama-pvc
----
-apiVersion: batch/v1
-kind: Job
-metadata:
-  name: ollama-init
-spec:
-  template:
-    spec:
-      containers:
-      - name: ollama-init
-        image: {{ .Values.ollama.image.repository }}:{{ .Values.ollama.image.tag }}
-        volumeMounts:
-        - name: ollama-storage
-          mountPath: /root/.ollama
-        - name: script-volume
-          mountPath: /scripts
-        command: ["sh", "-c", "/scripts/entrypoint.sh"]
-      restartPolicy: OnFailure
-      volumes:
-      - name: ollama-storage
-        persistentVolumeClaim:
-          claimName: ollama-pvc
-      - name: script-volume
-        configMap:
-          name: ollama-entrypoint-cm
-          defaultMode: 0500
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: ollama-entrypoint-cm
-data:
-  entrypoint.sh: |
-    #!/bin/bash
-    /bin/ollama serve &
-    pid=$!
-    sleep 5
-    echo "🔴 Retrieve {{ .Values.ollama.initModel }} model..."
-    ollama pull {{ .Values.ollama.initModel }}
-    echo "🟢 Done!"
-    wait $pid
-    exit 0
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: ollama-pvc
-spec:
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: {{ .Values.ollama.pvc.size }}
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: ollama-service
-spec:
-  selector:
-    app: ollama
-  ports:
-    - protocol: TCP
-      port: 80
-      targetPort: {{ .Values.ollama.port }}
-  type: ClusterIP
+# apiVersion: v1
+# kind: PersistentVolumeClaim
+# metadata:
+#   name: ollama-pvc
+# spec:
+#   accessModes:
+#     - ReadWriteOnce
+#   resources:
+#     requests:
+#       storage: {{ .Values.ollama.pvc.size }}
+# ---
+# apiVersion: v1
+# kind: Service
+# metadata:
+#   name: ollama-service
+# spec:
+#   selector:
+#     app: ollama
+#   ports:
+#     - protocol: TCP
+#       port: 80
+#       targetPort: {{ .Values.ollama.port }}
+#   type: ClusterIP
+# ---
+# apiVersion: apps/v1
+# kind: Deployment
+# metadata:
+#   name: ollama
+# spec:
+#   replicas: {{ .Values.ollama.replicas }}
+#   selector:
+#     matchLabels:
+#       app: ollama
+#   template:
+#     metadata:
+#       labels:
+#         app: ollama
+#       annotations:
+# {{- if .Values.istio.enabled }}
+#         "sidecar.istio.io/inject": "true"
+# {{- end }}
+#     spec:
+#       initContainers:
+#       - name: ollama-init
+#         image: {{ .Values.ollama.image.repository }}:{{ .Values.ollama.image.tag }}
+#         volumeMounts:
+#         - name: ollama-storage
+#           mountPath: /root/.ollama
+#         - name: script-volume
+#           mountPath: /scripts
+#         command: ["sh", "-c", "/scripts/entrypoint.sh"]
+#         env:
+#           - name: OLLAMA_KEEP_ALIVE
+#             value: "-1"
+#           - name: OLLAMA_DEBUG
+#             value: "1"
+#       containers:
+#       - name: ollama
+#         image: {{ .Values.ollama.image.repository }}:{{ .Values.ollama.image.tag }}
+#         command: ["/bin/ollama", "serve"]
+#         ports:
+#         - containerPort: {{ .Values.ollama.port }}
+#         volumeMounts:
+#         - name: ollama-storage
+#           mountPath: /root/.ollama
+#         resources:
+#           requests:
+#             cpu: "4"
+#             memory: "8Gi"
+#           limits:
+#             cpu: "4"
+#             memory: "8Gi"
+#         env:
+#           - name: OLLAMA_KEEP_ALIVE
+#             value: "-1"
+#           - name: OLLAMA_DEBUG
+#             value: "1"
+#       volumes:
+#       - name: ollama-storage
+#         persistentVolumeClaim:
+#           claimName: ollama-pvc
+#       - name: script-volume
+#         configMap:
+#           name: ollama-entrypoint-cm
+#           defaultMode: 0500
+# ---
+# apiVersion: v1
+# kind: ConfigMap
+# metadata:
+#   name: ollama-entrypoint-cm
+# data:
+#   entrypoint.sh: |
+#     #!/bin/bash
+#     /bin/ollama serve &
+#     pid=$!
+#     sleep 5
+#     echo "🔴 Pulling {{ .Values.ollama.initModel }} model..."
+#     ollama pull {{ .Values.ollama.initModel }}
+#     echo "🔴 Preloading {{ .Values.ollama.initModel }} model..."
+#     ollama run {{ .Values.ollama.initModel }} 
+#     echo "🟢 Done!"
+#     kill $pid
+#     wait $pid 2>/dev/null
+#     exit 0

@@ -1,0 +1,126 @@
+# prometheus-adapter.yaml
+prometheus:
+  url: http://prometheus-server.monitoring.svc
+  port: 80
+
+rules:
+  default: false
+  custom:
+    - seriesQuery: 'hubble_flows_processed_total{destination_workload!="",destination_namespace!=""}'
+      resources:
+        overrides:
+          destination_namespace:
+            resource: namespace
+          destination_workload:
+            resource: deployment
+      name:
+        matches: "^hubble_flows_processed_total$"
+        as: "hubble_flows_per_workload"
+      metricsQuery: 'sum(rate(hubble_flows_processed_total{<<.LabelMatchers>>}[1m])) by (destination_workload)'
+    - seriesQuery: 'hubble_flows_processed_total{destination_workload!="",destination_namespace!=""}'
+      resources:
+        overrides:
+          destination_namespace:
+            resource: namespace
+          destination_workload:
+            resource: deployment
+      name:
+        matches: "^hubble_flows_processed_total$"
+        as: "hubble_flows_per_pod"
+      metricsQuery: >
+        sum(rate(hubble_flows_processed_total{<<.LabelMatchers>>}[1m])) by (destination_workload)
+        /
+        (
+          count by (destination_workload) (
+            label_replace(
+              kube_pod_owner{owner_kind=~"(ReplicaSet|StatefulSet)"},
+              "destination_workload", "$1", "owner_name", "^(.*?)(-[a-z0-9]+)?$"
+            )
+          ) or vector(1)
+        )
+    - seriesQuery: 'hubble_http_request_duration_seconds_bucket{source_workload!="",destination_workload!=""}'
+      resources:
+        overrides:
+          destination_namespace:
+            resource: namespace
+          destination_workload:
+            resource: deployment
+      name:
+        matches: "^hubble_http_request_duration_seconds_bucket$"
+        as: "hubble_http_request_latency_p95"
+      metricsQuery: 'histogram_quantile(0.95, sum(rate(hubble_http_request_duration_seconds_bucket{<<.LabelMatchers>>}[1m])) by (le, destination_workload))'
+    - seriesQuery: 'hubble_http_requests_total{source_workload!=""}'
+      resources:
+        overrides:
+          destination_namespace:
+            resource: namespace
+          destination_workload:
+            resource: deployment
+      name:
+        matches: "^hubble_http_requests_total$"
+        as: "hubble_http_5XX_response_ratio"
+      metricsQuery: >
+        (
+          sum(rate(hubble_http_requests_total{<<.LabelMatchers>>, status=~"5.."}[1m])) by (destination_workload)
+          or
+          vector(0)
+        )
+        /
+        (
+          sum(rate(hubble_http_requests_total{<<.LabelMatchers>>}[1m])) by (destination_workload)
+          or
+          vector(1)
+        )
+    - seriesQuery: 'istio_requests_total{destination_workload!="",destination_workload_namespace!=""}'
+      resources:
+        overrides:
+          destination_workload_namespace:
+            resource: namespace
+          destination_workload:
+            resource: pod
+      name:
+        matches: "^istio_requests_total$"
+        as: "istio_requests_per_workload"
+      metricsQuery: 'sum(rate(istio_requests_total{<<.LabelMatchers>>,destination_workload!="",destination_workload_namespace!=""}[1m])) by (destination_workload_namespace, destination_workload)'
+    - seriesQuery: 'istio_requests_total{destination_workload!="",destination_workload_namespace!=""}'
+      resources:
+        overrides:
+          destination_workload_namespace:
+            resource: namespace
+          destination_workload:
+            resource: pod
+      name:
+        matches: "^istio_requests_total$"
+        as: "istio_requests_per_pod"
+      metricsQuery: 'sum(rate(istio_requests_total{<<.LabelMatchers>>,destination_workload!="",destination_workload_namespace!=""}[1m]))/ count(kube_pod_info{namespace=<<.destination_workload_namespace>>, pod=~"<<.destination_workload>>-[a-z0-9]+-[a-z0-9]+""})'
+    - seriesQuery: 'istio_request_duration_milliseconds_bucket{destination_workload!="",destination_workload_namespace!=""}'
+      resources:
+        overrides:
+          destination_workload_namespace:
+            resource: namespace
+          destination_workload:
+            resource: pod
+      name:
+        matches: "^istio_request_duration_milliseconds_bucket$"
+        as: "istio_request_latency_p95"
+      metricsQuery: 'histogram_quantile(0.95, sum(rate(istio_request_duration_milliseconds_bucket{<<.LabelMatchers>>,destination_workload!="",destination_workload_namespace!=""}[1m])) by (le, destination_workload_namespace, destination_workload))'
+    - seriesQuery: 'istio_requests_total{destination_workload!="", destination_workload_namespace!=""}'
+      resources:
+        overrides:
+          destination_workload_namespace:
+            resource: namespace
+          destination_workload:
+            resource: pod
+      name:
+        matches: "^istio_requests_total$"
+        as: "istio_5xx_error_ratio"
+      metricsQuery: 'sum(rate(istio_requests_total{<<.LabelMatchers>>, response_code=~"5..",destination_workload!="",destination_workload_namespace!=""}[1m])) / sum(rate(istio_requests_total{<<.LabelMatchers>>,destination_workload!="",destination_workload_namespace!=""}[1m])) by (destination_workload_namespace, destination_workload)'
+
+rbac:
+  create: true
+
+serviceAccount:
+  create: true
+  name: prometheus-adapter
+
+logLevel: 4  # Numeric value for debug logging (0=minimal, 4=debug)

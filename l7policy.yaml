@@ -1,0 +1,59 @@
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
+  name: "l7-visibility"
+spec:
+  endpointSelector:
+    matchLabels:
+      "k8s:io.kubernetes.pod.namespace": default
+  ingress:
+  - fromEndpoints:
+    - matchLabels:
+        "k8s:io.kubernetes.pod.namespace": default
+    toPorts:
+    - ports:
+      - port: "8080"
+        protocol: TCP
+      - port: "8081"
+        protocol: TCP
+      - port: "9090"
+        protocol: TCP
+      - port: "8000"
+        protocol: TCP
+      - port: "11434"
+        protocol: TCP
+      rules:
+        http: [{}]
+    - ports:
+      - port: "6379"
+        protocol: TCP
+  egress:
+  - toPorts:
+    - ports:
+      - port: "53"
+        protocol: ANY
+      rules:
+        dns:
+        - matchPattern: "*"
+  - toEndpoints:
+    - matchLabels:
+        "k8s:io.kubernetes.pod.namespace": default
+    toPorts:
+    - ports:
+      - port: "80"
+        protocol: TCP
+      - port: "8080"
+        protocol: TCP
+      - port: "8081"
+        protocol: TCP
+      - port: "9090"
+        protocol: TCP
+      - port: "8000"
+        protocol: TCP
+      - port: "11434"
+        protocol: TCP
+      rules:
+        http: [{}]
+    - ports:
+      - port: "6379"
+        protocol: TCP

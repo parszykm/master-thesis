@@ -1,23 +1,32 @@
 global:
-  imagePullPolicy: IfNotPresent
+  imagePullPolicy: Always #IfNotPresent
 
 istio:
+  enabled: true
+
+cilium:
   enabled: false
 
 backend:
   image:
     repository: parszyk/backend
     tag: latest
-  replicas: 1
+  replicas: 2
   port: 8080
   nodePort: 30030
   servicePort: 8081
+  hpa:
+    enabled: false
+    maxReplicas: 5
 
 worker:
   image:
     repository: parszyk/backend
     tag: latest
   replicas: 1
+  hpa:
+    enabled: false
+    maxReplicas: 5
 
 redis:
   image:
@@ -30,19 +39,92 @@ ocrService:
     repository: parszyk/ocr-service
     tag: latest
   port: 9090
+  hpa:
+    enabled: false
+    maxReplicas: 5
+
+# dataExtractor:
+#   image:
+#     repository: parszyk/data-extractor
+#     tag: latest
+#   port: 8000
+
+# ollama:
+#   image:
+#     repository: ollama/ollama
+#     tag: latest
+#   port: 11434
+#   replicas: 1
+#   pvc:
+#     size: 20Gi
+#   initModel: sroecker/nuextract-tiny-v1.5
 
 dataExtractor:
   image:
-    repository: parszyk/data-extractor
+    repository: parszyk/data-extractor-regex
     tag: latest
+  replicas: 1
   port: 8000
+  servicePort: 8000
+  hpa:
+    enabled: false
+    maxReplicas: 5
+  env:
+    DB_HOST: postgres-service
+    DB_NAME: invoices
+    DB_USER: postgres
+    DB_PASSWORD: mysecretpassword
+    DB_PORT: "5432"
 
-ollama:
+postgres:
   image:
-    repository: ollama/ollama
-    tag: latest
-  port: 11434
-  replicas: 2
+    repository: postgres
+    tag: "13"
+  replicas: 1
+  port: 5432
+  servicePort: 5432
   pvc:
-    size: 5Gi
-  initModel: sroecker/nuextract-tiny-v1.5
+    size: 1Gi
+  env:
+    POSTGRES_USER: postgres
+    POSTGRES_PASSWORD: mysecretpassword
+    POSTGRES_DB: invoices
+  initdb:
+    enabled: true
+    scripts:
+      init.sql: |
+              CREATE TABLE sellers (
+                  id SERIAL PRIMARY KEY,
+                  name VARCHAR(255) NOT NULL,
+                  address TEXT,
+                  tax_id VARCHAR(50) UNIQUE NOT NULL,
+                  iban VARCHAR(50),
+                  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+              );
+              CREATE TABLE clients (
+                  id SERIAL PRIMARY KEY,
+                  name VARCHAR(255) NOT NULL,
+                  address TEXT,
+                  tax_id VARCHAR(50) UNIQUE NOT NULL,
+                  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+              );
+              CREATE TABLE invoices (
+                  id SERIAL PRIMARY KEY,
+                  invoice_number VARCHAR(50) UNIQUE NOT NULL,
+                  issue_date DATE,
+                  seller_id INTEGER REFERENCES sellers(id) ON DELETE RESTRICT,
+                  client_id INTEGER REFERENCES clients(id) ON DELETE RESTRICT,
+                  net_total VARCHAR(20),
+                  gross_total VARCHAR(20),
+                  vat_rate VARCHAR(10),
+                  vat_amount VARCHAR(20),
+                  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+              );
+              CREATE TABLE items (
+                  id SERIAL PRIMARY KEY,
+                  invoice_id INTEGER REFERENCES invoices(id) ON DELETE CASCADE,
+                  description TEXT NOT NULL,
+                  quantity VARCHAR(20),
+                  unit VARCHAR(50),
+                  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+              );
