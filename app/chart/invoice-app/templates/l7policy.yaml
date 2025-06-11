@@ -23,8 +23,6 @@ spec:
         protocol: TCP
       - port: "{{ .Values.dataExtractor.port }}"
         protocol: TCP
-      - port: "{{ .Values.ollama.port }}"
-        protocol: TCP
       rules:
         http: [{}]
     - ports:
@@ -55,8 +53,6 @@ spec:
         protocol: TCP
       - port: "{{ .Values.dataExtractor.port }}"
         protocol: TCP
-      - port: "{{ .Values.ollama.port }}"
-        protocol: TCP
       rules:
         http: [{}]
     - ports:
@@ -83,5 +79,4 @@ spec:
         - ports:
             - port: "443"
               protocol: TCP
-
 {{- end }}

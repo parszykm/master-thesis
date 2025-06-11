@@ -14,6 +14,8 @@ spec:
       annotations:
 {{- if .Values.istio.enabled }}
         "sidecar.istio.io/inject": "true"
+        # "sidecar.istio.io/statsHistogramBuckets": '{"istiocustom":[100,500,1000,5000,10000,30000,60000,70000,80000,90000,100000,150000]}'
+        "sidecar.istio.io/statsHistogramBuckets": '{"istiocustom":[0.5,1,5,10,25,50,100,250,500,1000,2500,5000,10000,30000,40000,50000,60000,70000,80000,90000], "cluster.xds-grpc":[0.5,1,5,10,25,50,100,250,500,1000,2500,5000,10000,30000,40000,50000,60000,70000,80000,90000]}'
 {{- end }}
     spec:
       containers:
@@ -21,11 +23,18 @@ spec:
         image: {{ .Values.ocrService.image.repository }}:{{ .Values.ocrService.image.tag }}
         ports:
         - containerPort: {{ .Values.ocrService.port }}
+        resources:
+          requests:
+            cpu: "300m"
+            memory: "800Mi"
+          limits:
+            cpu: "500m"
+            memory: "1024Mi"
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: ocr-service
+  name: ocr-service-svc
 spec:
   selector:
     app: ocr
@@ -34,7 +43,7 @@ spec:
       port: {{ .Values.ocrService.port }}
       targetPort: {{ .Values.ocrService.port }}
   type: ClusterIP
-
+---
 {{- if .Values.ocrService.hpa.enabled }}
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
@@ -47,7 +56,7 @@ spec:
     kind: Deployment
     name: ocr-service
   minReplicas: 1
-  maxReplicas: {{ .Values.ocrService.maxReplicas | default 1}}
+  maxReplicas: {{ .Values.ocrService.hpa.maxReplicas | default 1}}
   metrics:
     - type: Resource
       resource:
@@ -72,7 +81,7 @@ spec:
           name: hubble_flows_per_pod
         target:
           type: Value
-          value: "150m"  # Scale up if flows per pod exceed 0.15 (150 milli)
+          value: "1000m"  # Scale up if flows per pod exceed 0.15 (150 milli)
     - type: Object
       object:
         describedObject:
@@ -80,10 +89,10 @@ spec:
           kind: Deployment
           name: ocr-service
         metric:
-          name: hubble_http_request_latency_p95
+          name: hubble_http_request_latency_average
         target:
           type: Value
-          value: "500m"  # Scale up if 95th percentile latency exceeds 500ms
+          value: "60000"  # Scale up if average latency exceeds 60s
     - type: Object
       object:
         describedObject:
@@ -115,10 +124,10 @@ spec:
           kind: Deployment
           name: ocr-service
         metric:
-          name: istio_request_latency_p95
+          name: istio_request_latency_average
         target:
           type: Value
-          value: "500m"  # Scale up if 95th percentile latency exceeds 500ms
+          value: "30000"  # Scale up if 95th percentile latency exceeds 500ms
     - type: Object
       object:
         describedObject:

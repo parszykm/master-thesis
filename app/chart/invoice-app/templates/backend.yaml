@@ -27,9 +27,16 @@ spec:
             - name: REDIS_URL
               value: redis://redis:{{ .Values.redis.port }}/0
             - name: OCR_URL
-              value: http://backend:{{ .Values.ocrService.port }}/ocr
+              value: http://backend:{{ .Values.backend.port }}/ocr
             - name: EXTRACTOR_URL
               value: http://data-extractor-service:{{ .Values.dataExtractor.port }}/generate
+          resources:
+            requests:
+              cpu: "80m"
+              memory: "128Mi"
+            limits:
+              cpu: "100m"
+              memory: "256Mi"
 ---
 # apiVersion: v1
 # kind: Service
@@ -101,7 +108,7 @@ spec:
 
 ---
 
-{{- if .Values.ocrService.hpa.enabled }}
+{{- if .Values.backend.hpa.enabled }}
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
@@ -113,7 +120,7 @@ spec:
     kind: Deployment
     name: backend
   minReplicas: 1
-  maxReplicas: {{ .Values.ocrService.maxReplicas | default 1}}
+  maxReplicas: {{ .Values.backend.hpa.maxReplicas | default 1}}
   metrics:
 {{- if .Values.cilium.enabled }}
     - type: Object

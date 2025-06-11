@@ -137,8 +137,37 @@ dashboards:
               "datasource": "Prometheus",
               "fill": 1,
               "fillGradient": 0,
-              "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+              "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
               "id": 4,
+              "legend": { "avg": false, "current": true, "max": false, "min": false, "show": true, "total": false, "values": true },
+              "lines": true,
+              "linewidth": 1,
+              "nullPointMode": "null",
+              "options": { "alertThreshold": true },
+              "targets": [
+                {
+                  "expr": "sum(rate(hubble_http_request_duration_seconds_sum{destination_namespace=\"default\"}[1m])) by (destination_workload) / sum(rate(hubble_http_request_duration_seconds_count{destination_namespace=\"default\"}[1m])) by (destination_workload)",
+                  "legendFormat": "{{destination_workload}}",
+                  "refId": "A"
+                }
+              ],
+              "title": "Hubble HTTP Request Latency Average",
+              "type": "graph",
+              "yaxes": [
+                { "format": "s", "label": "Seconds", "logBase": 1, "max": null, "min": null, "show": true },
+                { "format": "short", "label": null, "logBase": 1, "max": null, "min": null, "show": true }
+              ]
+            },
+            {
+              "aliasColors": {},
+              "bars": false,
+              "dashLength": 10,
+              "dashes": false,
+              "datasource": "Prometheus",
+              "fill": 1,
+              "fillGradient": 0,
+              "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+              "id": 5,
               "legend": { "avg": false, "current": true, "max": false, "min": false, "show": true, "total": false, "values": true },
               "lines": true,
               "linewidth": 1,
@@ -288,7 +317,7 @@ dashboards:
               "options": { "alertThreshold": true },
               "targets": [
                 {
-                  "expr": "histogram_quantile(0.95, sum(rate(istio_request_duration_milliseconds_bucket{destination_workload!=\"\",destination_workload_namespace=~\"$destination_workload_namespace\"}[1m])) by (le, destination_workload_namespace, destination_workload))",
+                  "expr": "histogram_quantile(0.95, sum(rate(istio_request_duration_milliseconds_bucket{destination_workload!=\"\",destination_workload_namespace=~\"$destination_workload_namespace\",le!~\"3600000|1800000|600000.0|300000.0\"}[1m])) by (le, destination_workload_namespace, destination_workload))",
                   "legendFormat": "{{destination_workload_namespace}}/{{destination_workload}}",
                   "refId": "A"
                 }
@@ -308,8 +337,37 @@ dashboards:
               "datasource": "Prometheus",
               "fill": 1,
               "fillGradient": 0,
-              "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+              "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
               "id": 4,
+              "legend": { "avg": false, "current": true, "max": false, "min": false, "show": true, "total": false, "values": true },
+              "lines": true,
+              "linewidth": 1,
+              "nullPointMode": "null",
+              "options": { "alertThreshold": true },
+              "targets": [
+                {
+                  "expr": "sum(rate(istio_request_duration_milliseconds_sum{destination_workload!=\"\", destination_workload_namespace=~\"$destination_workload_namespace\"}[1m])) by (destination_workload_namespace, destination_workload)\n/\nsum(rate(istio_request_duration_milliseconds_count{destination_workload!=\"\", destination_workload_namespace=~\"$destination_workload_namespace\"}[1m])) by (destination_workload_namespace, destination_workload)\n",
+                  "legendFormat": "{{destination_workload_namespace}}/{{destination_workload}}",
+                  "refId": "A"
+                }
+              ],
+              "title": "Istio Request Latency Average",
+              "type": "graph",
+              "yaxes": [
+                { "format": "ms", "label": "Milliseconds", "logBase": 1, "max": null, "min": null, "show": true },
+                { "format": "short", "label": null, "logBase": 1, "max": null, "min": null, "show": true }
+              ]
+            },
+            {
+              "aliasColors": {},
+              "bars": false,
+              "dashLength": 10,
+              "dashes": false,
+              "datasource": "Prometheus",
+              "fill": 1,
+              "fillGradient": 0,
+              "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+              "id": 5,
               "legend": { "avg": false, "current": true, "max": false, "min": false, "show": true, "total": false, "values": true },
               "lines": true,
               "linewidth": 1,
@@ -392,8 +450,341 @@ dashboards:
           "uid": "istio-metrics",
           "version": 1
         }
-
-# Configure Grafana service
+    hpa-load-testing:
+          gnetId: null
+          datasource: Prometheus
+          json: |
+            {
+              "annotations": {
+                "list": []
+              },
+              "editable": true,
+              "gnetId": null,
+              "graphTooltip": 0,
+              "links": [],
+              "panels": [
+                {
+                  "gridPos": {
+                    "h": 8,
+                    "w": 12,
+                    "x": 0,
+                    "y": 0
+                  },
+                  "id": 1,
+                  "targets": [
+                    {
+                      "expr": "kube_hpa_status_current_replicas{namespace=\"default\",horizontalpodautoscaler=~\"$hpa\"}",
+                      "legendFormat": "{{horizontalpodautoscaler}} - Current Replicas",
+                      "refId": "A"
+                    },
+                    {
+                      "expr": "kube_hpa_status_desired_replicas{namespace=\"default\",horizontalpodautoscaler=~\"$hpa\"}",
+                      "legendFormat": "{{horizontalpodautoscaler}} - Desired Replicas",
+                      "refId": "B"
+                    },
+                    {
+                      "expr": "sum(kube_pod_status_phase{namespace=\"default\",phase=\"Running\"}) by (pod)",
+                      "legendFormat": "{{pod}} - Running Pods",
+                      "refId": "C"
+                    }
+                  ],
+                  "title": "Scaling Latency (All Workloads in default)",
+                  "type": "graph",
+                  "yaxes": [
+                    {
+                      "format": "short",
+                      "label": "Replicas",
+                      "show": true
+                    },
+                    {
+                      "format": "short",
+                      "show": true
+                    }
+                  ],
+                  "legend": {
+                    "show": true,
+                    "values": true,
+                    "current": true
+                  }
+                },
+                {
+                  "gridPos": {
+                    "h": 8,
+                    "w": 12,
+                    "x": 12,
+                    "y": 0
+                  },
+                  "id": 2,
+                  "targets": [
+                    {
+                      "expr": "sum(rate(container_cpu_usage_seconds_total{namespace=\"default\"}[5m])) by (pod) * 100 / sum(kube_pod_container_resource_requests_cpu_cores{namespace=\"default\"}) by (pod)",
+                      "legendFormat": "{{pod}} - CPU Utilization (%)",
+                      "refId": "A"
+                    },
+                    {
+                      "expr": "kube_horizontalpodautoscaler_spec_target_metric{namespace=\"default\",horizontalpodautoscaler=~\"$hpa\",metric_name=\"cpu\",metric_target_type=\"utilization\"}",
+                      "legendFormat": "{{horizontalpodautoscaler}} - CPU Target (%)",
+                      "refId": "B"
+                    }
+                  ],
+                  "title": "CPU Utilization vs Target (All Workloads in default)",
+                  "type": "graph",
+                  "yaxes": [
+                    {
+                      "format": "percent",
+                      "label": "CPU Utilization (%)",
+                      "show": true
+                    },
+                    {
+                      "format": "short",
+                      "show": true
+                    }
+                  ],
+                  "legend": {
+                    "show": true,
+                    "values": true,
+                    "current": true
+                  }
+                },
+                {
+                  "gridPos": {
+                    "h": 8,
+                    "w": 12,
+                    "x": 0,
+                    "y": 8
+                  },
+                  "id": 3,
+                  "targets": [
+                    {
+                      "expr": "sum(container_memory_usage_bytes{namespace=\"default\"}) by (pod) / sum(kube_pod_container_resource_requests_memory_bytes{namespace=\"default\"}) by (pod) * 100",
+                      "legendFormat": "{{pod}} - Memory Utilization (%)",
+                      "refId": "A"
+                    },
+                    {
+                      "expr": "kube_horizontalpodautoscaler_spec_target_metric{namespace=\"default\",horizontalpodautoscaler=~\"$hpa\",metric_name=\"memory\",metric_target_type=\"utilization\"}",
+                      "legendFormat": "{{horizontalpodautoscaler}} - Memory Target (%)",
+                      "refId": "B"
+                    }
+                  ],
+                  "title": "Memory Utilization vs Target (All Workloads in default)",
+                  "type": "graph",
+                  "yaxes": [
+                    {
+                      "format": "percent",
+                      "label": "Memory Utilization (%)",
+                      "show": true
+                    },
+                    {
+                      "format": "short",
+                      "show": true
+                    }
+                  ],
+                  "legend": {
+                    "show": true,
+                    "values": true,
+                    "current": true
+                  }
+                },
+                {
+                  "gridPos": {
+                    "h": 8,
+                    "w": 6,
+                    "x": 12,
+                    "y": 8
+                  },
+                  "id": 4,
+                  "targets": [
+                    {
+                      "expr": "sum(kube_pod_container_resource_requests_cpu_cores{namespace=\"default\"}) by (pod) / sum(rate(container_cpu_usage_seconds_total{namespace=\"default\"}[5m])) by (pod)",
+                      "legendFormat": "{{pod}} - CPU Provisioning Ratio",
+                      "refId": "A"
+                    }
+                  ],
+                  "thresholds": [
+                    {
+                      "color": "green",
+                      "value": 0
+                    },
+                    {
+                      "color": "yellow",
+                      "value": 0.8
+                    },
+                    {
+                      "color": "red",
+                      "value": 1.2
+                    }
+                  ],
+                  "title": "CPU Provisioning Ratio (All Workloads in default)",
+                  "type": "gauge",
+                  "valueName": "current"
+                },
+                {
+                  "gridPos": {
+                    "h": 8,
+                    "w": 6,
+                    "x": 18,
+                    "y": 8
+                  },
+                  "id": 5,
+                  "targets": [
+                    {
+                      "expr": "sum(kube_pod_container_resource_requests_memory_bytes{namespace=\"default\"}) by (pod) / sum(container_memory_usage_bytes{namespace=\"default\"}) by (pod)",
+                      "legendFormat": "{{pod}} - Memory Provisioning Ratio",
+                      "refId": "A"
+                    }
+                  ],
+                  "thresholds": [
+                    {
+                      "color": "green",
+                      "value": 0
+                    },
+                    {
+                      "color": "yellow",
+                      "value": 0.8
+                    },
+                    {
+                      "color": "red",
+                      "value": 1.2
+                    }
+                  ],
+                  "title": "Memory Provisioning Ratio (All Workloads in default)",
+                  "type": "gauge",
+                  "valueName": "current"
+                },
+                {
+                  "gridPos": {
+                    "h": 8,
+                    "w": 12,
+                    "x": 0,
+                    "y": 16
+                  },
+                  "id": 6,
+                  "targets": [
+                    {
+                      "expr": "sum(rate(container_cpu_usage_seconds_total{namespace=\"default\"}[5m])) by (pod)",
+                      "legendFormat": "{{pod}} - Total CPU Usage (cores)",
+                      "refId": "A"
+                    }
+                  ],
+                  "title": "Total CPU Usage (All Workloads in default)",
+                  "type": "graph",
+                  "yaxes": [
+                    {
+                      "format": "short",
+                      "label": "CPU Cores",
+                      "show": true
+                    },
+                    {
+                      "format": "short",
+                      "show": true
+                    }
+                  ],
+                  "legend": {
+                    "show": true,
+                    "values": true,
+                    "current": true
+                  }
+                },
+                {
+                  "gridPos": {
+                    "h": 8,
+                    "w": 12,
+                    "x": 12,
+                    "y": 16
+                  },
+                  "id": 7,
+                  "targets": [
+                    {
+                      "expr": "sum(container_memory_usage_bytes{namespace=\"default\"}) by (pod)",
+                      "legendFormat": "{{pod}} - Total Memory Usage (bytes)",
+                      "refId": "A"
+                    }
+                  ],
+                  "title": "Total Memory Usage (All Workloads in default)",
+                  "type": "graph",
+                  "yaxes": [
+                    {
+                      "format": "bytes",
+                      "label": "Memory (bytes)",
+                      "show": true
+                    },
+                    {
+                      "format": "short",
+                      "show": true
+                    }
+                  ],
+                  "legend": {
+                    "show": true,
+                    "values": true,
+                    "current": true
+                  }
+                },
+                {
+                  "description": "Placeholder for custom task execution time metric. Update with actual metric name.",
+                  "gridPos": {
+                    "h": 8,
+                    "w": 12,
+                    "x": 0,
+                    "y": 24
+                  },
+                  "id": 8,
+                  "targets": [
+                    {
+                      "expr": "histogram_quantile(0.95, sum(rate(hubble_http_request_duration_seconds_bucket{namespace=\"default\"}[1m])) by (le, pod))",
+                      "legendFormat": "{{pod}} - P95 Task Duration (s)",
+                      "refId": "A"
+                    }
+                  ],
+                  "title": "Task Execution Time P95 (All Workloads in default)",
+                  "type": "stat",
+                  "valueName": "current"
+                }
+              ],
+              "schemaVersion": 36,
+              "style": "dark",
+              "tags": ["hpa", "kubernetes"],
+              "templating": {
+                "list": [
+                  {
+                    "current": {
+                      "text": "default",
+                      "value": "default"
+                    },
+                    "name": "namespace",
+                    "query": "label_values(kube_pod_info, namespace)",
+                    "type": "query",
+                    "hide": 0,
+                    "includeAll": false,
+                    "multi": false,
+                    "refresh": 1
+                  },
+                  {
+                    "allValue": ".*",
+                    "current": {},
+                    "name": "hpa",
+                    "query": "label_values(kube_hpa_status_current_replicas{namespace=\"default\"}, horizontalpodautoscaler)",
+                    "regex": "",
+                    "type": "query",
+                    "hide": 0,
+                    "includeAll": true,
+                    "multi": true,
+                    "refresh": 1
+                  }
+                ]
+              },
+              "time": {
+                "from": "now-6h",
+                "to": "now"
+              },
+              "timepicker": {
+                "refresh_intervals": ["30s", "1m", "5m", "15m", "30m", "1h"],
+                "time_options": ["5m", "15m", "1h", "6h", "12h", "24h", "2d", "7d", "30d"]
+              },
+              "timezone": "",
+              "title": "HPA Load Testing Dashboard",
+              "uid": "hpa-load-testing",
+              "version": 1
+            }
 service:
   type: ClusterIP
   port: 80

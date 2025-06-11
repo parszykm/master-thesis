@@ -20,14 +20,23 @@ spec:
       containers:
       - name: worker
         image: {{ .Values.worker.image.repository }}:{{ .Values.worker.image.tag }}
+        imagePullPolicy: {{ .Values.global.imagePullPolicy }}
         command: ["celery", "-A", "tasks", "worker", "--loglevel=info"]
         env:
         - name: REDIS_URL
           value: redis://redis:{{ .Values.redis.port }}/0
         - name: OCR_URL
-          value: http://ocr-service:{{ .Values.worker.port }}/ocr
+          value: http://ocr-service-svc:{{ .Values.ocrService.port }}/ocr
         - name: EXTRACTOR_URL
           value: http://data-extractor-service:{{ .Values.dataExtractor.port }}/parse-invoice
+        resources:
+          requests:
+            cpu: "200m"
+            memory: "256Mi"
+          limits:
+            cpu: "300m"
+            memory: "512Mi"
+
 
 ---
 
@@ -43,7 +52,7 @@ spec:
     kind: Deployment
     name: celery-worker
   minReplicas: 1
-  maxReplicas: {{ .Values.worker.maxReplicas | default 1}}
+  maxReplicas: {{ .Values.worker.hpa.maxReplicas | default 5}}
   metrics:
     - type: Resource
       resource:

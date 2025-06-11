@@ -69,6 +69,13 @@ spec:
           value: "http://postgres-service:{{ .Values.postgres.port }}"
         ports:
         - containerPort: {{ .Values.dataExtractor.port }}
+        resources:
+          requests:
+            cpu: "30m"
+            memory: "64Mi"
+          limits:
+            cpu: "40m"
+            memory: "128Mi"
 ---
 
 apiVersion: v1
@@ -83,7 +90,7 @@ spec:
   - protocol: TCP
     port: {{ .Values.dataExtractor.servicePort }}
     targetPort: {{ .Values.dataExtractor.port }}
-  type: LoadBalancer
+  type: ClusterIP
 
 ---
 
@@ -99,7 +106,7 @@ spec:
     kind: Deployment
     name: data-extractor
   minReplicas: 1
-  maxReplicas: {{ .Values.dataExtractor.maxReplicas | default 1}}
+  maxReplicas: {{ .Values.dataExtractor.hpa.maxReplicas | default 1}}
   metrics:
     - type: Resource
       resource:

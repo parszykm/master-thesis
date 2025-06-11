@@ -2,10 +2,10 @@ global:
   imagePullPolicy: Always #IfNotPresent
 
 istio:
-  enabled: true
+  enabled: false
 
 cilium:
-  enabled: false
+  enabled: true
 
 backend:
   image:
@@ -40,8 +40,8 @@ ocrService:
     tag: latest
   port: 9090
   hpa:
-    enabled: false
-    maxReplicas: 5
+    enabled: true
+    maxReplicas: 2
 
 # dataExtractor:
 #   image:

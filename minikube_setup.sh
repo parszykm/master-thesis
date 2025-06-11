@@ -46,5 +46,5 @@ helm upgrade --install prometheus prometheus-community/prometheus \
   --namespace monitoring --create-namespace  --set server.global.scrape_interval="30s"
 
 helm upgrade --install grafana grafana/grafana \
-  --namespace monitoring --create-namespace
+  --namespace monitoring --create-namespace -f grafana-values-2.yaml
 
