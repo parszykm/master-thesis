@@ -2,15 +2,15 @@ global:
   imagePullPolicy: Always #IfNotPresent
 
 istio:
-  enabled: false
+  enabled: true
 
 cilium:
-  enabled: true
+  enabled: false
 
 backend:
   image:
     repository: parszyk/backend
-    tag: latest
+    tag: arch-amd64
   replicas: 2
   port: 8080
   nodePort: 30030
@@ -22,7 +22,7 @@ backend:
 worker:
   image:
     repository: parszyk/backend
-    tag: latest
+    tag: arch-amd64
   replicas: 1
   hpa:
     enabled: false
@@ -37,32 +37,16 @@ redis:
 ocrService:
   image:
     repository: parszyk/ocr-service
-    tag: latest
+    tag: arch-amd64
   port: 9090
   hpa:
     enabled: true
     maxReplicas: 2
 
-# dataExtractor:
-#   image:
-#     repository: parszyk/data-extractor
-#     tag: latest
-#   port: 8000
-
-# ollama:
-#   image:
-#     repository: ollama/ollama
-#     tag: latest
-#   port: 11434
-#   replicas: 1
-#   pvc:
-#     size: 20Gi
-#   initModel: sroecker/nuextract-tiny-v1.5
-
 dataExtractor:
   image:
     repository: parszyk/data-extractor-regex
-    tag: latest
+    tag: arch-amd64
   replicas: 1
   port: 8000
   servicePort: 8000

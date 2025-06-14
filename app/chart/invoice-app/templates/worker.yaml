@@ -21,7 +21,8 @@ spec:
       - name: worker
         image: {{ .Values.worker.image.repository }}:{{ .Values.worker.image.tag }}
         imagePullPolicy: {{ .Values.global.imagePullPolicy }}
-        command: ["celery", "-A", "tasks", "worker", "--loglevel=info"]
+        # command: ["celery", "-A", "tasks", "worker", "--loglevel=info"]
+        command: ["celery", "-A", "tasks", "worker", "--loglevel=info", "-Q", "celery"]
         env:
         - name: REDIS_URL
           value: redis://redis:{{ .Values.redis.port }}/0

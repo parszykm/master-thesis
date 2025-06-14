@@ -21,30 +21,21 @@ spec:
       containers:
       - name: ocr
         image: {{ .Values.ocrService.image.repository }}:{{ .Values.ocrService.image.tag }}
+        imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+        command: ["celery", "-A", "ocr_worker", "worker", "--loglevel=info", "-Q", "ocr_queue", "--concurrency=1"]
+        env:
+        - name: REDIS_URL
+          value: redis://redis:{{ .Values.redis.port }}/0
         ports:
         - containerPort: {{ .Values.ocrService.port }}
         resources:
           requests:
-            cpu: "300m"
+            cpu: "800m"
             memory: "800Mi"
           limits:
-            cpu: "500m"
+            cpu: "1500m"
             memory: "1024Mi"
 ---
-apiVersion: v1
-kind: Service
-metadata:
-  name: ocr-service-svc
-spec:
-  selector:
-    app: ocr
-  ports:
-    - protocol: TCP
-      port: {{ .Values.ocrService.port }}
-      targetPort: {{ .Values.ocrService.port }}
-  type: ClusterIP
----
-{{- if .Values.ocrService.hpa.enabled }}
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
@@ -56,88 +47,128 @@ spec:
     kind: Deployment
     name: ocr-service
   minReplicas: 1
-  maxReplicas: {{ .Values.ocrService.hpa.maxReplicas | default 1}}
+  maxReplicas: {{ .Values.ocrService.hpa.maxReplicas | default 3}}
   metrics:
     - type: Resource
       resource:
         name: cpu
         target:
           type: Utilization
-          averageUtilization: {{ .Values.ocrService.hpa.cpuTarget | default 80 }} # Scale if CPU usage exceeds 80%
+          averageUtilization: {{ .Values.ocrService.hpa.cpuTarget | default 50 }} # Scale if CPU usage exceeds 80%
     - type: Resource
       resource:
         name: memory
         target:
           type: Utilization
           averageUtilization: {{ .Values.ocrService.hpa.memoryTarget | default 80 }} # Scale if memory usage exceeds 80%
-{{- if .Values.cilium.enabled }}
-    - type: Object
-      object:
-        describedObject:
-          apiVersion: apps/v1
-          kind: Deployment
-          name: ocr-service
-        metric:
-          name: hubble_flows_per_pod
-        target:
-          type: Value
-          value: "1000m"  # Scale up if flows per pod exceed 0.15 (150 milli)
-    - type: Object
-      object:
-        describedObject:
-          apiVersion: apps/v1
-          kind: Deployment
-          name: ocr-service
-        metric:
-          name: hubble_http_request_latency_average
-        target:
-          type: Value
-          value: "60000"  # Scale up if average latency exceeds 60s
-    - type: Object
-      object:
-        describedObject:
-          apiVersion: apps/v1
-          kind: Deployment
-          name: ocr-service
-        metric:
-          name: hubble_http_5XX_response_ratio
-        target:
-          type: Value
-          value: "0.01"  # Scale up if 5xx error ratio exceeds 1%
-{{- end }}
-{{- if .Values.istio.enabled }}
-    - type: Object
-      object:
-        describedObject:
-          apiVersion: apps/v1
-          kind: Deployment
-          name: ocr-service
-        metric:
-          name: istio_requests_per_pod
-        target:
-          type: Value
-          value: "150m"  # Scale up if flows per pod exceed 0.15 (150 milli)
-    - type: Object
-      object:
-        describedObject:
-          apiVersion: apps/v1
-          kind: Deployment
-          name: ocr-service
-        metric:
-          name: istio_request_latency_average
-        target:
-          type: Value
-          value: "30000"  # Scale up if 95th percentile latency exceeds 500ms
-    - type: Object
-      object:
-        describedObject:
-          apiVersion: apps/v1
-          kind: Deployment
-          name: ocr-service
-        metric:
-          name: istio_5xx_error_ratio
-        target:
-          type: Value
-          value: "0.01"  # Scale up if 5xx error ratio exceeds 1%
-{{- end }}
-{{- end }}
+# ---
+# apiVersion: v1
+# kind: Service
+# metadata:
+#   name: ocr-service-svc
+# spec:
+#   selector:
+#     app: ocr
+#   ports:
+#     - protocol: TCP
+#       port: {{ .Values.ocrService.port }}
+#       targetPort: {{ .Values.ocrService.port }}
+#   type: ClusterIP
+# ---
+# {{- if .Values.ocrService.hpa.enabled }}
+# apiVersion: autoscaling/v2
+# kind: HorizontalPodAutoscaler
+# metadata:
+#   name: ocr-service-hpa
+#   namespace: default
+# spec:
+#   scaleTargetRef:
+#     apiVersion: apps/v1
+#     kind: Deployment
+#     name: ocr-service
+#   minReplicas: 1
+#   maxReplicas: {{ .Values.ocrService.hpa.maxReplicas | default 1}}
+#   metrics:
+#     - type: Resource
+#       resource:
+#         name: cpu
+#         target:
+#           type: Utilization
+#           averageUtilization: {{ .Values.ocrService.hpa.cpuTarget | default 80 }} # Scale if CPU usage exceeds 80%
+#     - type: Resource
+#       resource:
+#         name: memory
+#         target:
+#           type: Utilization
+#           averageUtilization: {{ .Values.ocrService.hpa.memoryTarget | default 80 }} # Scale if memory usage exceeds 80%
+# {{- if .Values.cilium.enabled }}
+#     - type: Object
+#       object:
+#         describedObject:
+#           apiVersion: apps/v1
+#           kind: Deployment
+#           name: ocr-service
+#         metric:
+#           name: hubble_flows_per_pod
+#         target:
+#           type: Value
+#           value: "1000m"  # Scale up if flows per pod exceed 0.15 (150 milli)
+#     - type: Object
+#       object:
+#         describedObject:
+#           apiVersion: apps/v1
+#           kind: Deployment
+#           name: ocr-service
+#         metric:
+#           name: hubble_http_request_latency_average
+#         target:
+#           type: Value
+#           value: "60000"  # Scale up if average latency exceeds 60s
+#     - type: Object
+#       object:
+#         describedObject:
+#           apiVersion: apps/v1
+#           kind: Deployment
+#           name: ocr-service
+#         metric:
+#           name: hubble_http_5XX_response_ratio
+#         target:
+#           type: Value
+#           value: "0.01"  # Scale up if 5xx error ratio exceeds 1%
+# {{- end }}
+# {{- if .Values.istio.enabled }}
+#     - type: Object
+#       object:
+#         describedObject:
+#           apiVersion: apps/v1
+#           kind: Deployment
+#           name: ocr-service
+#         metric:
+#           name: istio_requests_per_pod
+#         target:
+#           type: Value
+#           value: "150m"  # Scale up if flows per pod exceed 0.15 (150 milli)
+#     - type: Object
+#       object:
+#         describedObject:
+#           apiVersion: apps/v1
+#           kind: Deployment
+#           name: ocr-service
+#         metric:
+#           name: istio_request_latency_average
+#         target:
+#           type: Value
+#           value: "30000"  # Scale up if 95th percentile latency exceeds 500ms
+#     - type: Object
+#       object:
+#         describedObject:
+#           apiVersion: apps/v1
+#           kind: Deployment
+#           name: ocr-service
+#         metric:
+#           name: istio_5xx_error_ratio
+#         target:
+#           type: Value
+#           value: "0.01"  # Scale up if 5xx error ratio exceeds 1%
+# {{- end }}
+# {{- end }}
