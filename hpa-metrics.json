@@ -286,8 +286,8 @@
               "options": {
                 "mode": "exclude",
                 "names": [
-                  "ocr-service",
-                  "ocr-service-hpa - Memory Target (%)"
+                  "ocr-worker",
+                  "ocr-worker-hpa - Memory Target (%)"
                 ],
                 "prefix": "All except:",
                 "readOnly": true
@@ -416,8 +416,8 @@
               "options": {
                 "mode": "exclude",
                 "names": [
-                  "ocr-service-hpa - CPU Target (%)",
-                  "ocr-service"
+                  "ocr-worker-hpa - CPU Target (%)",
+                  "ocr-worker"
                 ],
                 "prefix": "All except:",
                 "readOnly": true
@@ -545,7 +545,7 @@
               "options": {
                 "mode": "exclude",
                 "names": [
-                  "ocr-service"
+                  "ocr-worker"
                 ],
                 "prefix": "All except:",
                 "readOnly": true

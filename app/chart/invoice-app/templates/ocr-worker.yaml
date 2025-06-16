@@ -1,0 +1,117 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ocr-worker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ocr
+  template:
+    metadata:
+      labels:
+        app: ocr
+      annotations:
+{{- if .Values.istio.enabled }}
+        "sidecar.istio.io/inject": "true"
+        "sidecar.istio.io/statsHistogramBuckets": '{"istiocustom":[0.5,1,5,10,25,50,100,250,500,1000,2500,5000,10000,30000,40000,50000,60000,70000,80000,90000], "cluster.xds-grpc":[0.5,1,5,10,25,50,100,250,500,1000,2500,5000,10000,30000,40000,50000,60000,70000,80000,90000]}'
+{{- end }}
+    spec:
+      containers:
+      - name: ocr
+        image: {{ .Values.ocrService.image.repository }}:{{ .Values.ocrService.image.tag }}
+        imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+        command: ["celery", "-A", "ocr_worker", "worker", "-E", "--loglevel=info", "-Q", "ocr_queue", "--concurrency=1"]
+        env:
+        - name: REDIS_URL
+          value: redis://redis:{{ .Values.redis.port }}/0
+        # ports:
+        # - containerPort: {{ .Values.ocrService.port }}
+        resources:
+          requests:
+            cpu: "300m"
+            memory: "800Mi"
+          limits:
+            cpu: "500m"
+            memory: "1024Mi"
+---
+# apiVersion: autoscaling/v2
+# kind: HorizontalPodAutoscaler
+# metadata:
+#   name: ocr-worker-hpa
+#   namespace: default
+# spec:
+#   scaleTargetRef:
+#     apiVersion: apps/v1
+#     kind: Deployment
+#     name: ocr-worker
+#   minReplicas: 1
+#   maxReplicas: {{ .Values.ocrService.hpa.maxReplicas | default 3}}
+#   metrics:
+#     - type: Resource
+#       resource:
+#         name: cpu
+#         target:
+#           type: Utilization
+#           averageUtilization: {{ .Values.ocrService.hpa.cpuTarget | default 50 }} # Scale if CPU usage exceeds 80%
+#     - type: Resource
+#       resource:
+#         name: memory
+#         target:
+#           type: Utilization
+#           averageUtilization: {{ .Values.ocrService.hpa.memoryTarget | default 80 }} # Scale if memory usage exceeds 80%
+
+{{- if .Values.ocrService.hpa.enabled }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: ocr-worker-hpa
+  namespace: default
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: ocr-worker
+  minReplicas: 1
+  maxReplicas: {{ .Values.ocrService.hpa.maxReplicas | default 1}}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.ocrService.hpa.cpuTarget | default 50 }} # Scale if CPU usage exceeds 50%
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.ocrService.hpa.memoryTarget | default 80 }} # Scale if memory usage exceeds 80%
+{{- if .Values.cilium.enabled }}
+    - type: Object
+      object:
+        describedObject:
+          apiVersion: apps/v1
+          kind: Deployment
+          name: ocr-worker
+        metric:
+          name: hubble_flows_per_pod
+        target:
+          type: AvergeValue
+          value: "800m"  # Scale up if flows per pod exceed 0.4 (400 milli)
+{{- end }}
+# It is impossible to scale based on numbers of requests as Istio doesnt support protocols different from HTTPS/gRPC
+# {{- if .Values.istio.enabled }}
+#     - type: Object
+#       object:
+#         describedObject:
+#           apiVersion: apps/v1
+#           kind: Deployment
+#           name: ocr-worker
+#         metric:
+#           name: istio_requests_per_pod
+#         target:
+#           type: Value
+#           value: "400m"  # Scale up if flows per pod exceed 0.4 (400 milli)
+# {{- end }}
+{{- end }}

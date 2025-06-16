@@ -131,7 +131,7 @@ spec:
           name: hubble_flows_per_pod
         target:
           type: Value
-          value: "150m"  # Scale up if flows per pod exceed 0.15 (150 milli)
+          value: "2000m"  # Scale up if flows per pod exceed 0.15 (150 milli)
     - type: Object
       object:
         describedObject:
@@ -139,10 +139,10 @@ spec:
           kind: Deployment
           name: data-extractor
         metric:
-          name: hubble_http_request_latency_p95
+          name: hubble_http_request_latency_average
         target:
           type: Value
-          value: "500m"  # Scale up if 95th percentile latency exceeds 500ms
+          value: "10m"  # Scale up if 95th percentile latency exceeds 10ms
     - type: Object
       object:
         describedObject:
@@ -153,7 +153,7 @@ spec:
           name: hubble_http_5XX_response_ratio
         target:
           type: Value
-          value: "0.01"  # Scale up if 5xx error ratio exceeds 1%
+          value: "0.1"  # Scale up if 5xx error ratio exceeds 10%
 {{- end }}
 {{- if .Values.istio.enabled }}
     - type: Object
@@ -166,7 +166,7 @@ spec:
           name: istio_requests_per_pod
         target:
           type: Value
-          value: "150m"  # Scale up if flows per pod exceed 0.15 (150 milli)
+          value: "2000m"  # Scale up if flows per pod exceed 2 (2000 milli)
     - type: Object
       object:
         describedObject:
@@ -174,10 +174,10 @@ spec:
           kind: Deployment
           name: data-extractor
         metric:
-          name: istio_request_latency_p95
+          name: istio_request_latency_average
         target:
           type: Value
-          value: "500m"  # Scale up if 95th percentile latency exceeds 500ms
+          value: "10m"  # Scale up if 95th percentile latency exceeds 10ms
     - type: Object
       object:
         describedObject:

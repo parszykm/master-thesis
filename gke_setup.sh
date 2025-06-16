@@ -13,6 +13,7 @@ export PROJECT_ID=$(gcloud config get-value project)
 export CLUSTER_NAME="master-thesis-gke"
 export REGION="us-central1"
 
+BUILD_TYPE=${1:-istio}
 # Istio Configuration
 ISTIO_VERSION="1.22.1"
 
@@ -49,14 +50,29 @@ if ! gcloud container clusters describe "$CLUSTER_NAME" --region "$REGION" &>/de
 
   # Create a standard GKE cluster. We will install Cilium manually.
   # The --enable-ip-alias is important for Cilium to work correctly in chained mode.
-  gcloud container clusters create "$CLUSTER_NAME" \
-    --project "$PROJECT_ID" \
-    --region "$REGION" \
-    --machine-type "$MACHINE_TYPE" \
-    --num-nodes "$NUM_NODES" \
-    --workload-pool "${PROJECT_ID}.svc.id.goog" \
-    --release-channel "regular" \
-    --enable-ip-alias
+  if [ "$BUILD_TYPE" == "istio" ]; then
+    gcloud container clusters create "$CLUSTER_NAME" \
+        --project "$PROJECT_ID" \
+        --region "$REGION" \
+        --machine-type "$MACHINE_TYPE" \
+        --num-nodes "$NUM_NODES" \
+        --workload-pool "${PROJECT_ID}.svc.id.goog" \
+        --release-channel "regular" \
+        --enable-ip-alias
+   elif [ "$BUILD_TYPE" == "cilium" ]; then 
+    gcloud container clusters create "$CLUSTER_NAME" \
+        --project "$PROJECT_ID" \
+        --region "$REGION" \
+        --machine-type "$MACHINE_TYPE" \
+        --num-nodes "$NUM_NODES" \
+        --workload-pool "${PROJECT_ID}.svc.id.goog" \
+        --release-channel "regular" \
+        --node-taints node.cilium.io/agent-not-ready=true:NoExecute \
+        --enable-ip-alias
+    else
+      echo "Not supported BUILD_TYPE = $BUILD_TYPE"
+      exit 1
+    fi
 
   echo "Cluster '$CLUSTER_NAME' created successfully."
 else
@@ -71,64 +87,65 @@ print_header "Configuring kubectl to connect to $CLUSTER_NAME"
 gcloud container clusters get-credentials "$CLUSTER_NAME" --region "$REGION" --project "$PROJECT_ID"
 echo "kubectl is now configured."
 
-# ==============================================================================
-# CNI Installation (Cilium CLI)
-# ==============================================================================
+if [ "$BUILD_TYPE" == "cilium" ]; then
+    # ==============================================================================
+    # CNI Installation (Cilium CLI)
+    # ==============================================================================
 
-print_header "Installing Cilium with the Cilium CLI"
+    print_header "Installing Cilium with the Cilium CLI"
 
-# # Download the Cilium CLI
-# if ! command -v cilium &> /dev/null; then
-#     echo "Cilium CLI not found. Downloading..."
-#     CILIUM_CLI_VERSION=$(curl -s https://raw.githubusercontent.com/cilium/cilium-cli/main/stable.txt)
-#     CLI_ARCH=arm64
-#     if [ "$(uname -m)" = "aarch64" ]; then CLI_ARCH=arm64; fi
-#     curl -L --fail --remote-name-all https://github.com/cilium/cilium-cli/releases/download/${CILIUM_CLI_VERSION}/cilium-linux-${CLI_ARCH}.tar.gz{,.sha256sum}
-#     sha256sum --check cilium-linux-${CLI_ARCH}.tar.gz.sha256sum
-#     sudo tar xzvfC cilium-linux-${CLI_ARCH}.tar.gz /usr/local/bin
-#     rm cilium-linux-${CLI_ARCH}.tar.gz{,.sha256sum}
-# else
-#     echo "Cilium CLI is already installed."
-# fi
+    # Download the Cilium CLI
+    if ! command -v cilium &> /dev/null; then
+        echo "Cilium CLI not found. Downloading..."
+        CILIUM_CLI_VERSION=$(curl -s https://raw.githubusercontent.com/cilium/cilium-cli/main/stable.txt)
+        CLI_ARCH=arm64
+        if [ "$(uname -m)" = "aarch64" ]; then CLI_ARCH=arm64; fi
+        curl -L --fail --remote-name-all https://github.com/cilium/cilium-cli/releases/download/${CILIUM_CLI_VERSION}/cilium-linux-${CLI_ARCH}.tar.gz{,.sha256sum}
+        sha256sum --check cilium-linux-${CLI_ARCH}.tar.gz.sha256sum
+        sudo tar xzvfC cilium-linux-${CLI_ARCH}.tar.gz /usr/local/bin
+        rm cilium-linux-${CLI_ARCH}.tar.gz{,.sha256sum}
+    else
+        echo "Cilium CLI is already installed."
+    fi
 
-# # Install Cilium into the cluster
-# if [ -f "cilium-values.yaml" ]; then
-#   print_header "Installing Cilium with values from cilium-values.yaml"
-#   cilium install --set cluster.name=$CLUSTER_NAME -f cilium-values.yaml
-# else
-#   print_header "Installing Cilium with default values"
-#   echo "Warning: 'cilium-values.yaml' not found. Installing with defaults."
-#   cilium install --set cluster.name=$CLUSTER_NAME
-# fi
+    # Install Cilium into the cluster
+    if [ -f "cilium-values.yaml" ]; then
+    print_header "Installing Cilium with values from cilium-values.yaml"
+    cilium install --set cluster.name=$CLUSTER_NAME -f cilium-values.yaml
+    else
+    print_header "Installing Cilium with default values"
+    echo "Warning: 'cilium-values.yaml' not found. Installing with defaults."
+    cilium install --set cluster.name=$CLUSTER_NAME
+    fi
 
-# # Enable Hubble for observability
-# print_header "Enabling Hubble UI"
-# cilium hubble enable --ui
+    # Enable Hubble for observability
+    print_header "Enabling Hubble UI"
+    cilium hubble enable --ui
+elif [ "$BUILD_TYPE" == "istio" ]; then
+    # ==============================================================================
+    # Service Mesh Installation (Istio via istioctl)
+    # ==============================================================================
+    print_header "Installing Istio $ISTIO_VERSION with istioctl"
 
-# ==============================================================================
-# Service Mesh Installation (Istio via istioctl)
-# ==============================================================================
+    # Download and extract Istio
+    if [ ! -d "istio-${ISTIO_VERSION}" ]; then
+        echo "Downloading Istio v${ISTIO_VERSION}..."
+        curl -L https://istio.io/downloadIstio | ISTIO_VERSION=$ISTIO_VERSION sh -
+    else
+        echo "Istio v${ISTIO_VERSION} directory already exists. Skipping download."
+    fi
 
-print_header "Installing Istio $ISTIO_VERSION with istioctl"
+    # Add istioctl to the path for this script's execution
+    export PATH=$PWD/istio-$ISTIO_VERSION/bin:$PATH
+    echo "istioctl added to PATH."
 
-# Download and extract Istio
-if [ ! -d "istio-${ISTIO_VERSION}" ]; then
-    echo "Downloading Istio v${ISTIO_VERSION}..."
-    curl -L https://istio.io/downloadIstio | ISTIO_VERSION=$ISTIO_VERSION sh -
-else
-    echo "Istio v${ISTIO_VERSION} directory already exists. Skipping download."
+    # Install Istio using the 'default' profile
+    istioctl install --set profile=default -y --set values.global.platform=gke
+
+    # Label the default namespace for automatic sidecar injection
+    print_header "Enabling Istio sidecar injection for the 'default' namespace"
+    kubectl label namespace default istio-injection=enabled --overwrite
 fi
-
-# Add istioctl to the path for this script's execution
-export PATH=$PWD/istio-$ISTIO_VERSION/bin:$PATH
-echo "istioctl added to PATH."
-
-# Install Istio using the 'default' profile
-istioctl install --set profile=default -y --set values.global.platform=gke
-
-# Label the default namespace for automatic sidecar injection
-print_header "Enabling Istio sidecar injection for the 'default' namespace"
-kubectl label namespace default istio-injection=enabled --overwrite
 
 # ==============================================================================
 # Monitoring Stack Installation (Prometheus & Grafana)

@@ -13,8 +13,11 @@ spec:
       labels:
         app: backend
       annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/path: "/metrics"
+        prometheus.io/port: "{{ .Values.backend.servicePort }}"
 {{- if .Values.istio.enabled }}
-        "sidecar.istio.io/inject": "true"
+        sidecar.istio.io/inject: "true"
 {{- end }}
     spec:
       containers:
@@ -32,11 +35,11 @@ spec:
               value: http://data-extractor-service:{{ .Values.dataExtractor.port }}/generate
           resources:
             requests:
-              cpu: "80m"
-              memory: "128Mi"
-            limits:
-              cpu: "100m"
+              cpu: "200m"
               memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
 ---
 # apiVersion: v1
 # kind: Service
@@ -64,7 +67,8 @@ spec:
   selector:
     app: backend
   ports:
-    - port: {{ .Values.backend.servicePort }}
+    - name: backend
+      port: {{ .Values.backend.servicePort }}
       targetPort: {{ .Values.backend.port }}
       protocol: TCP
 ---
@@ -133,7 +137,7 @@ spec:
           name: hubble_flows_per_pod
         target:
           type: Value
-          value: "150m"
+          value: "30" # scale if number of requests per pod is graeter than 30 per second
 {{- end }}
 {{- if .Values.istio.enabled }}
     - type: Object
@@ -146,6 +150,6 @@ spec:
           name: istio_requests_per_pod
         target:
           type: Value
-          value: "150m"
+          value: "30" # scale if number of requests per pod is graeter than 30 per second
 {{- end }}
 {{- end }}

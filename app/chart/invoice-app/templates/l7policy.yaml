@@ -19,8 +19,6 @@ spec:
         protocol: TCP
       - port: "{{ .Values.backend.servicePort }}"
         protocol: TCP
-      - port: "{{ .Values.ocrService.port }}"
-        protocol: TCP
       - port: "{{ .Values.dataExtractor.port }}"
         protocol: TCP
       rules:
@@ -30,6 +28,13 @@ spec:
         protocol: TCP
       - port: "{{ .Values.postgres.port }}"
         protocol: TCP
+  - fromEntities:
+      - world
+    toPorts:
+      - ports:
+        - port: "{{ .Values.backend.port }}"
+          protocol: TCP
+
   egress:
   - toPorts:
     - ports:
@@ -49,8 +54,6 @@ spec:
         protocol: TCP
       - port: "{{ .Values.backend.servicePort }}"
         protocol: TCP
-      - port: "{{ .Values.ocrService.port }}"
-        protocol: TCP
       - port: "{{ .Values.dataExtractor.port }}"
         protocol: TCP
       rules:
@@ -60,23 +63,20 @@ spec:
         protocol: TCP
       - port: "{{ .Values.redis.port }}"
         protocol: TCP
-
+  - toEntities:
+    - world
 ---
-
 apiVersion: "cilium.io/v2"
 kind: CiliumNetworkPolicy
 metadata:
-  name: allow-any-fqdn
-  namespace: default
+  name: "debug-allow-all"
+  namespace: default 
 spec:
-  endpointSelector:
-    matchLabels:
-      app: ollama
+  endpointSelector: {}
+  ingress:
+    - fromEntities:
+        - all
   egress:
-    - toFQDNs:
-        - matchPattern: "*"
-      toPorts:
-        - ports:
-            - port: "443"
-              protocol: TCP
+    - toEntities:
+        - all
 {{- end }}

@@ -1,4 +1,35 @@
 {
+    "result": {
+        "client": "Castillo LLC",
+        "client_address": "70391 Kelsey Terrace Garcialand, VT 41740",
+        "client_tax_id": "901-88-0463",
+        "gross_total": "$ 819,06",
+        "iban": "GB96VWUL52026848004193",
+        "invoice_number": "16273983",
+        "issue_date": "04/01/2017",
+        "items": [
+            {
+                "description": "Rug White Moroccan Beni Ourain Trellis Shag Area Rug Authentic Handmade Carpet  3: Abstract Living Room Carpet 1,00 Home Decor Nordic Style Bedside Area Rug Floor Mats ",
+                "quantity": "2,00",
+                "unit": ""
+            },
+            {
+                "description": "Leopard Printed Rug Skin Mat Leather Faux Fur Animals Area Rugs Home Carpets  : 1pc Exquisite Durable Foot 2,00  Cloth Christmas Carpet Xmas Cushion for Kitchen",
+                "quantity": "1,00",
+                "unit": ""
+            }
+        ],
+        "net_total": "$ 819,06",
+        "seller": "Reyes, Holloway and Lee",
+        "seller_address": "38676 Johnson Burg Suite 666 West Rebeccamouth, SD 02588",
+        "seller_tax_id": "909-83-7738",
+        "vat_amount": "",
+        "vat_rate": ""
+    },
+    "status": "done"
+}
+
+{
     "annotations": {
       "list": []
     },
@@ -292,3 +323,308 @@
     "uid": null,
     "version": 1
   }
+  
+
+  dashboards:
+  default:
+    hubble-metrics:
+      # Your existing Hubble dashboard (unchanged)
+    istio-metrics:
+      # Your existing Istio dashboard (unchanged)
+    hpa-load-testing:
+      gnetId: null
+      datasource: Prometheus
+      json: |
+        {
+          "annotations": {
+            "list": []
+          },
+          "editable": true,
+          "gnetId": null,
+          "graphTooltip": 0,
+          "links": [],
+          "panels": [
+            {
+              "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 0,
+                "y": 0
+              },
+              "id": 1,
+              "targets": [
+                {
+                  "expr": "kube_hpa_status_current_replicas{namespace=\"$namespace\",horizontalpodautoscaler=~\"$hpa\"}",
+                  "legendFormat": "{{horizontalpodautoscaler}} - Current Replicas",
+                  "refId": "A"
+                },
+                {
+                  "expr": "kube_hpa_status_desired_replicas{namespace=\"$namespace\",horizontalpodautoscaler=~\"$hpa\"}",
+                  "legendFormat": "{{horizontalpodautoscaler}} - Desired Replicas",
+                  "refId": "B"
+                },
+                {
+                  "expr": "sum(kube_pod_status_phase{namespace=\"$namespace\",phase=\"Running\",pod=~\"$workload.*\"})",
+                  "legendFormat": "{{workload}} - Running Pods",
+                  "refId": "C"
+                }
+              ],
+              "title": "Scaling Latency",
+              "type": "graph",
+              "yaxes": [
+                {
+                  "format": "short",
+                  "label": "Replicas"
+                },
+                {
+                  "format": "short"
+                }
+              ]
+            },
+            {
+              "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 12,
+                "y": 0
+              },
+              "id": 2,
+              "targets": [
+                {
+                  "expr": "sum(rate(container_cpu_usage_seconds_total{namespace=\"$namespace\",pod=~\"$workload.*\"}[5m])) * 100 / sum(kube_pod_container_resource_requests_cpu_cores{namespace=\"$namespace\",pod=~\"$workload.*\"})",
+                  "legendFormat": "{{pod}} - CPU Utilization (%)",
+                  "refId": "A"
+                },
+                {
+                  "expr": "kube_horizontalpodautoscaler_spec_target_metric{namespace=\"$namespace\",horizontalpodautoscaler=~\"$hpa\",metric_name=\"cpu\",metric_target_type=\"utilization\"}",
+                  "legendFormat": "{{horizontalpodautoscaler}} - CPU Target (%)",
+                  "refId": "B"
+                }
+              ],
+              "title": "CPU Utilization vs Target",
+              "type": "graph",
+              "yaxes": [
+                {
+                  "format": "percent",
+                  "label": "CPU Utilization (%)"
+                },
+                {
+                  "format": "short"
+                }
+              ]
+            },
+            {
+              "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 0,
+                "y": 8
+              },
+              "id": 3,
+              "targets": [
+                {
+                  "expr": "sum(container_memory_usage_bytes{namespace=\"$namespace\",pod=~\"$workload.*\"}) / sum(kube_pod_container_resource_requests_memory_bytes{namespace=\"$namespace\",pod=~\"$workload.*\"}) * 100",
+                  "legendFormat": "{{pod}} - Memory Utilization (%)",
+                  "refId": "A"
+                },
+                {
+                  "expr": "kube_horizontalpodautoscaler_spec_target_metric{namespace=\"$namespace\",horizontalpodautoscaler=~\"$hpa\",metric_name=\"memory\",metric_target_type=\"utilization\"}",
+                  "legendFormat": "{{horizontalpodautoscaler}} - Memory Target (%)",
+                  "refId": "B"
+                }
+              ],
+              "title": "Memory Utilization vs Target",
+              "type": "graph",
+              "yaxes": [
+                {
+                  "format": "percent",
+                  "label": "Memory Utilization (%)"
+                },
+                {
+                  "format": "short"
+                }
+              ]
+            },
+            {
+              "gridPos": {
+                "h": 8,
+                "w": 6,
+                "x": 12,
+                "y": 8
+              },
+              "id": 4,
+              "targets": [
+                {
+                  "expr": "sum(kube_pod_container_resource_requests_cpu_cores{namespace=\"$namespace\",pod=~\"$workload.*\"}) / sum(rate(container_cpu_usage_seconds_total{namespace=\"$namespace\",pod=~\"$workload.*\"}[5m]))",
+                  "legendFormat": "{{pod}} - CPU Provisioning Ratio",
+                  "refId": "A"
+                }
+              ],
+              "thresholds": [
+                {
+                  "color": "green",
+                  "value": 0
+                },
+                {
+                  "color": "yellow",
+                  "value": 0.8
+                },
+                {
+                  "color": "red",
+                  "value": 1.2
+                }
+              ],
+              "title": "CPU Provisioning Ratio",
+              "type": "gauge"
+            },
+            {
+              "gridPos": {
+                "h": 8,
+                "w": 6,
+                "x": 18,
+                "y": 8
+              },
+              "id": 5,
+              "targets": [
+                {
+                  "expr": "sum(kube_pod_container_resource_requests_memory_bytes{namespace=\"$namespace\",pod=~\"$workload.*\"}) / sum(container_memory_usage_bytes{namespace=\"$namespace\",pod=~\"$workload.*\"})",
+                  "legendFormat": "{{pod}} - Memory Provisioning Ratio",
+                  "refId": "A"
+                }
+              ],
+              "thresholds": [
+                {
+                  "color": "green",
+                  "value": 0
+                },
+                {
+                  "color": "yellow",
+                  "value": 0.8
+                },
+                {
+                  "color": "red",
+                  "value": 1.2
+                }
+              ],
+              "title": "Memory Provisioning Ratio",
+              "type": "gauge"
+            },
+            {
+              "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 0,
+                "y": 16
+              },
+              "id": 6,
+              "targets": [
+                {
+                  "expr": "sum(rate(container_cpu_usage_seconds_total{namespace=\"$namespace\",pod=~\"$workload.*\"}[5m]))",
+                  "legendFormat": "{{pod}} - Total CPU Usage (cores)",
+                  "refId": "A"
+                }
+              ],
+              "title": "Total CPU Usage",
+              "type": "graph",
+              "yaxes": [
+                {
+                  "format": "short",
+                  "label": "CPU Cores"
+                },
+                {
+                  "format": "short"
+                }
+              ]
+            },
+            {
+              "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 12,
+                "y": 16
+              },
+              "id": 7,
+              "targets": [
+                {
+                  "expr": "sum(container_memory_usage_bytes{namespace=\"$namespace\",pod=~\"$workload.*\"})",
+                  "legendFormat": "{{pod}} - Total Memory Usage (bytes)",
+                  "refId": "A"
+                }
+              ],
+              "title": "Total Memory Usage",
+              "type": "graph",
+              "yaxes": [
+                {
+                  "format": "bytes",
+                  "label": "Memory (bytes)"
+                },
+                {
+                  "format": "short"
+                }
+              ]
+            },
+            {
+              "description": "Placeholder for custom task execution time metric. Update with actual metric name.",
+              "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 0,
+                "y": 24
+              },
+              "id": 8,
+              "targets": [
+                {
+                  "expr": "task_duration_seconds{namespace=\"$namespace\",pod=~\"$workload.*\"}",
+                  "legendFormat": "{{pod}} - Task Duration (s)",
+                  "refId": "A"
+                }
+              ],
+              "title": "Task Execution Time (Placeholder)",
+              "type": "stat"
+            }
+          ],
+          "schemaVersion": 36,
+          "style": "dark",
+          "tags": ["hpa", "kubernetes"],
+          "templating": {
+            "list": [
+              {
+                "current": {
+                  "text": "default",
+                  "value": "default"
+                },
+                "name": "namespace",
+                "query": "label_values(kube_pod_info, namespace)",
+                "type": "query"
+              },
+              {
+                "allValue": ".*",
+                "current": {},
+                "name": "hpa",
+                "query": "label_values(kube_hpa_status_current_replicas{namespace=\"$namespace\"}, horizontalpodautoscaler)",
+                "regex": "",
+                "type": "query"
+              },
+              {
+                "allValue": ".*",
+                "current": {},
+                "name": "workload",
+                "query": "label_values(kube_pod_info{namespace=\"$namespace\"}, pod)",
+                "regex": "",
+                "type": "query"
+              }
+            ]
+          },
+          "time": {
+            "from": "now-6h",
+            "to": "now"
+          },
+          "timepicker": {
+            "refresh_intervals": ["30s", "1m", "5m", "15m", "30m", "1h"],
+            "time_options": ["5m", "15m", "1h", "6h", "12h", "24h", "2d", "7d", "30d"]
+          },
+          "timezone": "",
+          "title": "HPA Load Testing Dashboard",
+          "uid": "hpa-load-testing",
+          "version": 1
+        }

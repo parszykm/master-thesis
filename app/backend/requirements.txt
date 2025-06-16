@@ -2,3 +2,5 @@ flask
 celery[redis]
 requests
 gunicorn
+flower
+prometheus-client

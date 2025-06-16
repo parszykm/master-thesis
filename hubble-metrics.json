@@ -104,7 +104,7 @@
       "pluginVersion": "12.0.1",
       "targets": [
         {
-          "expr": "sum(rate(hubble_flows_processed_total{destination_workload=~\"backend|celery-worker|data-extractor|ocr-service|postgres|redis\",destination_namespace=\"default\"}[1m])) by (destination_namespace, destination_workload)",
+          "expr": "sum(rate(hubble_flows_processed_total{destination_workload=~\"backend|celery-coordinator|data-extractor|ocr-worker|postgres|redis\",destination_namespace=\"default\"}[1m])) by (destination_namespace, destination_workload)",
           "legendFormat": "{{destination_workload}}",
           "refId": "A"
         }
@@ -494,14 +494,14 @@
           "value": "$__all"
         },
         "datasource": "Prometheus",
-        "definition": "label_values(hubble_flows_processed_total{destination_namespace=\"default\",destination_workload=~\"backend|celery-worker|data-extractor|ocr-service|postgres|redis\"}, destination_workload)",
+        "definition": "label_values(hubble_flows_processed_total{destination_namespace=\"default\",destination_workload=~\"backend|celery-coordinator|data-extractor|ocr-worker|postgres|redis\"}, destination_workload)",
         "includeAll": true,
         "label": "Workload",
         "multi": true,
         "name": "destination_workload",
         "options": [],
         "query": {
-          "query": "label_values(hubble_flows_processed_total{destination_namespace=\"default\",destination_workload=~\"backend|celery-worker|data-extractor|ocr-service|postgres|redis\"}, destination_workload)",
+          "query": "label_values(hubble_flows_processed_total{destination_namespace=\"default\",destination_workload=~\"backend|celery-coordinator|data-extractor|ocr-worker|postgres|redis\"}, destination_workload)",
           "refId": "Prometheus-destination_workload-Variable-Query"
         },
         "refresh": 1,

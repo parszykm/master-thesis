@@ -139,7 +139,7 @@ dashboards:
               "pluginVersion": "12.0.1",
               "targets": [
                 {
-                  "expr": "sum(rate(hubble_flows_processed_total{destination_workload=~\"backend|celery-worker|data-extractor|ocr-service|postgres|redis\",destination_namespace=\"default\"}[1m])) by (destination_namespace, destination_workload)",
+                  "expr": "sum(rate(hubble_flows_processed_total{destination_workload=~\"backend|celery-coordinator|data-extractor|ocr-worker|postgres|redis\",destination_namespace=\"default\"}[1m])) by (destination_namespace, destination_workload)",
                   "legendFormat": "{{destination_workload}}",
                   "refId": "A"
                 }
@@ -230,7 +230,7 @@ dashboards:
               "pluginVersion": "12.0.1",
               "targets": [
                 {
-                  "expr": "sum(rate(hubble_flows_processed_total{destination_workload=~\"backend|celery-worker|data-extractor|ocr-service|postgres|redis\",destination_namespace=\"default\"}[1m])) by (destination_workload) / (count by (destination_workload) (label_replace(kube_pod_owner{owner_kind=~\"(ReplicaSet|StatefulSet)\", namespace=\"default\"},\"destination_workload\", \"$1\", \"owner_name\", \"^(.*)-[a-z0-9]+$\")) or vector(1))",
+                  "expr": "sum(rate(hubble_flows_processed_total{destination_workload=~\"backend|celery-coordinator|data-extractor|ocr-worker|postgres|redis\",destination_namespace=\"default\"}[1m])) by (destination_workload) / (count by (destination_workload) (label_replace(kube_pod_owner{owner_kind=~\"(ReplicaSet|StatefulSet)\", namespace=\"default\"},\"destination_workload\", \"$1\", \"owner_name\", \"^(.*)-[a-z0-9]+$\")) or vector(1))",
                   "legendFormat": "{{destination_workload}}",
                   "refId": "A"
                 }
@@ -529,14 +529,14 @@ dashboards:
                   "value": "$__all"
                 },
                 "datasource": "Prometheus",
-                "definition": "label_values(hubble_flows_processed_total{destination_namespace=\"default\",destination_workload=~\"backend|celery-worker|data-extractor|ocr-service|postgres|redis\"}, destination_workload)",
+                "definition": "label_values(hubble_flows_processed_total{destination_namespace=\"default\",destination_workload=~\"backend|celery-coordinator|data-extractor|ocr-worker|postgres|redis\"}, destination_workload)",
                 "includeAll": true,
                 "label": "Workload",
                 "multi": true,
                 "name": "destination_workload",
                 "options": [],
                 "query": {
-                  "query": "label_values(hubble_flows_processed_total{destination_namespace=\"default\",destination_workload=~\"backend|celery-worker|data-extractor|ocr-service|postgres|redis\"}, destination_workload)",
+                  "query": "label_values(hubble_flows_processed_total{destination_namespace=\"default\",destination_workload=~\"backend|celery-coordinator|data-extractor|ocr-worker|postgres|redis\"}, destination_workload)",
                   "refId": "Prometheus-destination_workload-Variable-Query"
                 },
                 "refresh": 1,
@@ -546,10 +546,21 @@ dashboards:
             ]
           },
           "time": {
-            "from": "now-6h",
+            "from": "now-5m",
             "to": "now"
           },
-          "timepicker": {},
+          "timepicker": {
+            "refresh_intervals": [
+              "5s",
+              "10s",
+              "30s",
+              "1m",
+              "5m",
+              "15m",
+              "30m",
+              "1h"
+            ]
+          },
           "timezone": "",
           "title": "Hubble Metrics Dashboard (default)",
           "uid": "hubble-metrics",
@@ -1064,7 +1075,7 @@ dashboards:
                 "name": "destination_workload_namespace",
                 "options": [],
                 "query": {
-                  "query": "label_values(istio_requests_total, destination_workload_namespace)",
+                  "query": "label_values(istio_requests_total{=\"default\"}, destination_workload_namespace)",
                   "refId": "Prometheus-destination_workload_namespace-Variable-Query"
                 },
                 "refresh": 1,
@@ -1096,10 +1107,21 @@ dashboards:
             ]
           },
           "time": {
-            "from": "2025-06-08T16:00:56.504Z",
-            "to": "2025-06-08T16:07:39.902Z"
+            "from": "now-5m",
+            "to": "now"
           },
-          "timepicker": {},
+          "timepicker": {
+            "refresh_intervals": [
+              "5s",
+              "10s",
+              "30s",
+              "1m",
+              "5m",
+              "15m",
+              "30m",
+              "1h"
+            ]
+          },
           "timezone": "",
           "title": "Istio Metrics Dashboard",
           "uid": "istio-metrics",
@@ -1129,7 +1151,7 @@ dashboards:
           "editable": true,
           "fiscalYearStartMonth": 0,
           "graphTooltip": 0,
-          "id": 4,
+          "id": 1,
           "links": [],
           "panels": [
             {
@@ -1190,7 +1212,32 @@ dashboards:
                   },
                   "unit": "short"
                 },
-                "overrides": []
+                "overrides": [
+                  {
+                    "__systemRef": "hideSeriesFrom",
+                    "matcher": {
+                      "id": "byNames",
+                      "options": {
+                        "mode": "exclude",
+                        "names": [
+                          "celery-coordinator-service-hpa - Current Replicas"
+                        ],
+                        "prefix": "All except:",
+                        "readOnly": true
+                      }
+                    },
+                    "properties": [
+                      {
+                        "id": "custom.hideFrom",
+                        "value": {
+                          "legend": false,
+                          "tooltip": false,
+                          "viz": true
+                        }
+                      }
+                    ]
+                  }
+                ]
               },
               "gridPos": {
                 "h": 8,
@@ -1233,7 +1280,7 @@ dashboards:
                   "refId": "C"
                 }
               ],
-              "title": "Scaling Latency (All Workloads in default)",
+              "title": "Scaling Latency - Desired vs Current Replicas (All Workloads in default)",
               "type": "timeseries"
             },
             {
@@ -1250,7 +1297,7 @@ dashboards:
                     "axisBorderShow": false,
                     "axisCenteredZero": false,
                     "axisColorMode": "text",
-                    "axisLabel": "Replicas",
+                    "axisLabel": "Seconds",
                     "axisPlacement": "auto",
                     "barAlignment": 0,
                     "barWidthFactor": 0.6,
@@ -1291,8 +1338,7 @@ dashboards:
                         "value": 80
                       }
                     ]
-                  },
-                  "unit": "short"
+                  }
                 },
                 "overrides": []
               },
@@ -1302,12 +1348,10 @@ dashboards:
                 "x": 12,
                 "y": 0
               },
-              "id": 9,
+              "id": 10,
               "options": {
                 "legend": {
-                  "calcs": [
-                    "lastNotNull"
-                  ],
+                  "calcs": [],
                   "displayMode": "list",
                   "placement": "bottom",
                   "showLegend": true
@@ -1322,13 +1366,13 @@ dashboards:
               "targets": [
                 {
                   "editorMode": "code",
-                  "expr": "kube_horizontalpodautoscaler_status_current_replicas{namespace=\"default\",horizontalpodautoscaler=~\"$hpa\"}/kube_horizontalpodautoscaler_status_desired_replicas{namespace=\"default\",horizontalpodautoscaler=~\"$hpa\"}",
-                  "legendFormat": "{{horizontalpodautoscaler}} - Replias Ratio",
+                  "expr": "sum(rate(flower_task_runtime_seconds_sum[1m])) by (task)\n/\nsum(rate(flower_task_runtime_seconds_count[1m])) by (task)\n",
+                  "legendFormat": "__auto",
                   "range": true,
                   "refId": "A"
                 }
               ],
-              "title": "Scaling Latency (All Workloads in default)",
+              "title": "Average Celery Tasks Duration",
               "type": "timeseries"
             },
             {
@@ -1397,8 +1441,8 @@ dashboards:
                       "options": {
                         "mode": "exclude",
                         "names": [
-                          "ocr-service",
-                          "ocr-service-hpa - Memory Target (%)"
+                          "ocr-worker",
+                          "ocr-worker-hpa - Memory Target (%)"
                         ],
                         "prefix": "All except:",
                         "readOnly": true
@@ -1527,8 +1571,8 @@ dashboards:
                       "options": {
                         "mode": "exclude",
                         "names": [
-                          "ocr-service-hpa - CPU Target (%)",
-                          "ocr-service"
+                          "ocr-worker",
+                          "ocr-worker-hpa - CPU Target (%)"
                         ],
                         "prefix": "All except:",
                         "readOnly": true
@@ -1648,32 +1692,7 @@ dashboards:
                   },
                   "unit": "short"
                 },
-                "overrides": [
-                  {
-                    "__systemRef": "hideSeriesFrom",
-                    "matcher": {
-                      "id": "byNames",
-                      "options": {
-                        "mode": "exclude",
-                        "names": [
-                          "ocr-service"
-                        ],
-                        "prefix": "All except:",
-                        "readOnly": true
-                      }
-                    },
-                    "properties": [
-                      {
-                        "id": "custom.hideFrom",
-                        "value": {
-                          "legend": false,
-                          "tooltip": false,
-                          "viz": true
-                        }
-                      }
-                    ]
-                  }
-                ]
+                "overrides": []
               },
               "gridPos": {
                 "h": 8,
@@ -1819,7 +1838,7 @@ dashboards:
                     "axisBorderShow": false,
                     "axisCenteredZero": false,
                     "axisColorMode": "text",
-                    "axisLabel": "",
+                    "axisLabel": "Used CPU / Requested CPU",
                     "axisPlacement": "auto",
                     "barAlignment": 0,
                     "barWidthFactor": 0.6,
@@ -1911,7 +1930,7 @@ dashboards:
                     "axisBorderShow": false,
                     "axisCenteredZero": false,
                     "axisColorMode": "text",
-                    "axisLabel": "",
+                    "axisLabel": "Used Memory / Requested Memory",
                     "axisPlacement": "auto",
                     "barAlignment": 0,
                     "barWidthFactor": 0.6,
@@ -2031,6 +2050,8 @@ dashboards:
           },
           "timepicker": {
             "refresh_intervals": [
+              "5s",
+              "10s",
               "30s",
               "1m",
               "5m",
@@ -2040,17 +2061,42 @@ dashboards:
             ]
           },
           "timezone": "",
-          "title": "HPA Load Testing Dashboard Copy",
+          "title": "HPA Load Testing Dashboard",
           "uid": "66944961-deb9-42de-ad77-6d28ffe9d567",
-          "version": 5
+          "version": 2
         }
 service:
   # type: ClusterIP
   type: LoadBalancer
   port: 80
 
+# imageRenderer:
+#   enabled: true
+#   image:
+#     tag: "latest"  # Use the latest renderer image
+#   env:
+#     ENABLE_METRICS: "true"
+#     RENDERING_DUMPIO: "true"
+#     RENDERING_VERBOSE_LOGGING: "true"
+#   service:
+#     port: 8081
+  # renderingCallbackURL: "http://grafana:3000/"
+  # serverURL: "http://grafana-image-renderer:8081/render"
+
 # Enable persistence (optional, for storing Grafana configuration)
 persistence:
   enabled: true
   size: 10Gi
   storageClassName: standard
+# grafana:
+#   env:
+#     GF_RENDERING_CALLBACK_URL: "http://grafana:3000/"
+#     GF_RENDERING_SERVER_URL: "http://grafana-image-renderer:8081/render"
+#   # GF_AUTH_ANONYMOUS_ENABLED: "true"  # Optional, for testing
+#   # GF_AUTH_ANONYMOUS_ORG_ROLE: "Viewer"  # Optional, for testing
+# # grafana.ini:
+# #   rendering:
+# #     server_url: http://renderer:8081/render
+# #     callback_url: http://grafana:3000/
+# #     verbose_logging: true
+
