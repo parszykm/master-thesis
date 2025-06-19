@@ -142,7 +142,7 @@ spec:
           name: hubble_http_request_latency_average
         target:
           type: Value
-          value: "10m"  # Scale up if 95th percentile latency exceeds 10ms
+          value: "60m"  # Scale up if 95th percentile latency exceeds 10ms
     - type: Object
       object:
         describedObject:
@@ -177,7 +177,7 @@ spec:
           name: istio_request_latency_average
         target:
           type: Value
-          value: "10m"  # Scale up if 95th percentile latency exceeds 10ms
+          value: "60m"  # Scale up if 95th percentile latency exceeds 60ms
     - type: Object
       object:
         describedObject:

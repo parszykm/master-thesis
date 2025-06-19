@@ -13,6 +13,9 @@ spec:
       labels:
         app: celery-coordinator
       annotations:
+        prometheus.io/scrape: 'true'
+        prometheus.io/path: '/metrics'
+        prometheus.io/port: "{{ .Values.worker.metrics.port }}"
 {{- if .Values.istio.enabled }}
         "sidecar.istio.io/inject": "true"
 {{- end }}
@@ -21,13 +24,16 @@ spec:
       - name: worker
         image: {{ .Values.worker.image.repository }}:{{ .Values.worker.image.tag }}
         imagePullPolicy: {{ .Values.global.imagePullPolicy }}
-        # command: ["celery", "-A", "tasks", "worker", "--loglevel=info"]
         command: ["celery", "-A", "tasks", "worker", "-E", "--loglevel=info", "-Q", "celery"]
+        ports:
+          - containerPort: {{ .Values.worker.metrics.port }}
         env:
         - name: REDIS_URL
           value: redis://redis:{{ .Values.redis.port }}/0
         - name: EXTRACTOR_URL
           value: http://data-extractor-service:{{ .Values.dataExtractor.port }}/parse-invoice
+        - name: METRICS_SERVER_URL
+          value: "http://localhost:{{ .Values.worker.metrics.port }}/record_duration"
         resources:
           requests:
             cpu: "200m"
@@ -35,7 +41,39 @@ spec:
           limits:
             cpu: "300m"
             memory: "512Mi"
+      - name: metrics-server
+        image: parszyk/celery-metrics-server:arch-amd64
+        command: ["flask", "--app", "server", "run", "--host", "0.0.0.0", "--port", "{{ .Values.worker.metrics.port }}"]
+        imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+        ports:
+          - name: metrics
+            containerPort: {{ .Values.worker.metrics.port }}
+        env:
+        - name: METRICS_PORT
+          value: "{{ .Values.worker.metrics.port }}"
+        resources:
+          requests:
+            cpu: "50m"
+            memory: "64Mi"
+          limits:
+            cpu: "100m"
+            memory: "128Mi"
 
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: celery-metrics
+  namespace: {{ .Release.Namespace }}
+spec:
+  selector:
+    app: celery-coordinator
+  ports:
+  - name: metrics
+    port: {{ .Values.worker.metrics.port  }}
+    targetPort: {{ .Values.worker.metrics.port  }}
+  type: ClusterIP
 
 ---
 
@@ -76,20 +114,21 @@ spec:
           name: hubble_flows_per_pod
         target:
           type: Value
-          value: "5000m"  # Scale up if flows per pod exceed 5 (5000 milli). Coordinator works in conccurency level 8 so value c.a. 8 times greater than scaling the ocr-worker
+          value: "2000m"  # Scale up if flows per pod exceed 5 (5000 milli). Coordinator works in conccurency level 8 so value c.a. 8 times greater than scaling the ocr-worker
 {{- end }}
 # It is impossible to scale based on numbers of requests as Istio doesnt support protocols different from HTTPS/gRPC
-# {{- if .Values.istio.enabled }}
-#     - type: Object
-#       object:
-#         describedObject:
-#           apiVersion: apps/v1
-#           kind: Deployment
-#           name: backend
-#         metric:
-#           name: istio_requests_per_pod
-#         target:
-#           type: Value
-#           value: "5000m"  # Scale up if flows per pod exceed 5 (5000 milli). Coordinator works in conccurency level 8 so value c.a. 8 times greater than scaling the ocr-worker
-# {{- end }}
+# To let the value of requests per backend worklad be a scaling factor
+{{- if .Values.istio.enabled }}
+    - type: Object
+      object:
+        describedObject:
+          apiVersion: apps/v1
+          kind: Deployment
+          name: backend
+        metric:
+          name: istio_requests_per_pod
+        target:
+          type: Value
+          value: "15"  # Scale up if flows per pod exceed 20
+{{- end }}
 {{- end }}

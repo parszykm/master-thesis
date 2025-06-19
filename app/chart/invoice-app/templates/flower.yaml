@@ -105,8 +105,6 @@ apiVersion: v1
 kind: Service
 metadata:
   name: flower-service
-  namespace: default # Same namespace as the deployment
-  # Add this annotation so Prometheus can discover it
   annotations:
     prometheus.io/scrape: 'true'
     prometheus.io/port: '5555'

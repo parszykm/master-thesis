@@ -114,7 +114,7 @@ dashboards:
                 "overrides": []
               },
               "gridPos": {
-                "h": 8,
+                "h": 13,
                 "w": 12,
                 "x": 0,
                 "y": 0
@@ -136,7 +136,7 @@ dashboards:
                   "sort": "none"
                 }
               },
-              "pluginVersion": "12.0.1",
+              "pluginVersion": "12.0.1+security-01",
               "targets": [
                 {
                   "expr": "sum(rate(hubble_flows_processed_total{destination_workload=~\"backend|celery-coordinator|data-extractor|ocr-worker|postgres|redis\",destination_namespace=\"default\"}[30s])) by (destination_namespace, destination_workload)",
@@ -205,7 +205,7 @@ dashboards:
                 "overrides": []
               },
               "gridPos": {
-                "h": 8,
+                "h": 13,
                 "w": 12,
                 "x": 12,
                 "y": 0
@@ -227,7 +227,7 @@ dashboards:
                   "sort": "none"
                 }
               },
-              "pluginVersion": "12.0.1",
+              "pluginVersion": "12.0.1+security-01",
               "targets": [
                 {
                   "expr": "sum(rate(hubble_flows_processed_total{destination_workload=~\"backend|celery-coordinator|data-extractor|ocr-worker|postgres|redis\",destination_namespace=\"default\"}[30s])) by (destination_workload) / (count by (destination_workload) (label_replace(kube_pod_owner{owner_kind=~\"(ReplicaSet|StatefulSet)\", namespace=\"default\"},\"destination_workload\", \"$1\", \"owner_name\", \"^(.*)-[a-z0-9]+$\")) or vector(1))",
@@ -296,10 +296,10 @@ dashboards:
                 "overrides": []
               },
               "gridPos": {
-                "h": 8,
+                "h": 14,
                 "w": 12,
                 "x": 0,
-                "y": 8
+                "y": 13
               },
               "id": 3,
               "options": {
@@ -318,11 +318,13 @@ dashboards:
                   "sort": "none"
                 }
               },
-              "pluginVersion": "12.0.1",
+              "pluginVersion": "12.0.1+security-01",
               "targets": [
                 {
-                  "expr": "histogram_quantile(0.95, sum(rate(hubble_http_request_duration_seconds_bucket{destination_namespace=\"default\"}[30s])) by (le, destination_workload))",
+                  "editorMode": "code",
+                  "expr": "histogram_quantile(\n  0.95,\n  sum by (le, destination_workload) (\n    label_replace(\n      rate(hubble_http_request_duration_seconds_bucket{destination_namespace=\"default\"}[30s]),\n      \"destination_workload\",\n      \"backend\",\n      \"destination_workload\",\n      \"^$\"\n    )\n  )\n)\n",
                   "legendFormat": "{{destination_workload}}",
+                  "range": true,
                   "refId": "A"
                 }
               ],
@@ -389,10 +391,10 @@ dashboards:
                 "overrides": []
               },
               "gridPos": {
-                "h": 8,
+                "h": 14,
                 "w": 12,
                 "x": 12,
-                "y": 8
+                "y": 13
               },
               "id": 5,
               "options": {
@@ -411,7 +413,7 @@ dashboards:
                   "sort": "none"
                 }
               },
-              "pluginVersion": "12.0.1",
+              "pluginVersion": "12.0.1+security-01",
               "targets": [
                 {
                   "expr": "sum(rate(hubble_http_requests_total{status=~\"5..\",destination_namespace=\"default\"}[30s])) by (destination_workload) > 0 or vector(0)  / (sum(rate(hubble_http_requests_total{destination_namespace=\"default\"}[30s])) by (destination_workload) > 0 or vector(1))",
@@ -480,10 +482,10 @@ dashboards:
                 "overrides": []
               },
               "gridPos": {
-                "h": 8,
+                "h": 14,
                 "w": 12,
                 "x": 0,
-                "y": 16
+                "y": 27
               },
               "id": 4,
               "options": {
@@ -502,11 +504,13 @@ dashboards:
                   "sort": "none"
                 }
               },
-              "pluginVersion": "12.0.1",
+              "pluginVersion": "12.0.1+security-01",
               "targets": [
                 {
-                  "expr": "sum(rate(hubble_http_request_duration_seconds_sum{destination_namespace=\"default\"}[30s])) by (destination_workload) / sum(rate(hubble_http_request_duration_seconds_count{destination_namespace=\"default\"}[30s])) by (destination_workload)",
+                  "editorMode": "code",
+                  "expr": "sum by (destination_workload) (\n  label_replace(\n    rate(hubble_http_request_duration_seconds_sum{destination_namespace=\"default\"}[30s]),\n    \"destination_workload\", \n    \"backend\", \n    \"destination_workload\", \n    \"^$\"\n  )\n) \n/ \nsum by (destination_workload) (\n  label_replace(\n    rate(hubble_http_request_duration_seconds_count{destination_namespace=\"default\"}[30s]),\n    \"destination_workload\", \n    \"backend\", \n    \"destination_workload\", \n    \"^$\"\n  )\n)\n",
                   "legendFormat": "{{destination_workload}}",
+                  "range": true,
                   "refId": "A"
                 }
               ],
@@ -1168,7 +1172,7 @@ dashboards:
                     "axisBorderShow": false,
                     "axisCenteredZero": false,
                     "axisColorMode": "text",
-                    "axisLabel": "Replicas",
+                    "axisLabel": "Seconds",
                     "axisPlacement": "auto",
                     "barAlignment": 0,
                     "barWidthFactor": 0.6,
@@ -1209,48 +1213,20 @@ dashboards:
                         "value": 80
                       }
                     ]
-                  },
-                  "unit": "short"
-                },
-                "overrides": [
-                  {
-                    "__systemRef": "hideSeriesFrom",
-                    "matcher": {
-                      "id": "byNames",
-                      "options": {
-                        "mode": "exclude",
-                        "names": [
-                          "celery-coordinator-service-hpa - Current Replicas"
-                        ],
-                        "prefix": "All except:",
-                        "readOnly": true
-                      }
-                    },
-                    "properties": [
-                      {
-                        "id": "custom.hideFrom",
-                        "value": {
-                          "legend": false,
-                          "tooltip": false,
-                          "viz": true
-                        }
-                      }
-                    ]
                   }
-                ]
+                },
+                "overrides": []
               },
               "gridPos": {
-                "h": 8,
-                "w": 12,
+                "h": 14,
+                "w": 11,
                 "x": 0,
                 "y": 0
               },
-              "id": 1,
+              "id": 11,
               "options": {
                 "legend": {
-                  "calcs": [
-                    "lastNotNull"
-                  ],
+                  "calcs": [],
                   "displayMode": "list",
                   "placement": "bottom",
                   "showLegend": true
@@ -1261,26 +1237,17 @@ dashboards:
                   "sort": "none"
                 }
               },
-              "pluginVersion": "12.0.1",
+              "pluginVersion": "12.0.1+security-01",
               "targets": [
                 {
                   "editorMode": "code",
-                  "expr": "kube_horizontalpodautoscaler_status_current_replicas{namespace=\"default\",horizontalpodautoscaler=~\"$hpa\"}",
-                  "hide": false,
-                  "legendFormat": "{{horizontalpodautoscaler}} - Current Replicas",
+                  "expr": "sum(rate(invoice_chain_duration_seconds_sum[30s]))\n/\nsum(rate(invoice_chain_duration_seconds_count[30s]))\n",
+                  "legendFormat": "Average Invoice Task Duration",
                   "range": true,
-                  "refId": "B"
-                },
-                {
-                  "editorMode": "code",
-                  "expr": "kube_horizontalpodautoscaler_status_desired_replicas{namespace=\"default\",horizontalpodautoscaler=~\"$hpa\"}",
-                  "hide": false,
-                  "legendFormat": "{{horizontalpodautoscaler}} - Desired Replicas",
-                  "range": true,
-                  "refId": "C"
+                  "refId": "A"
                 }
               ],
-              "title": "Scaling Latency - Desired vs Current Replicas (All Workloads in default)",
+              "title": "Average End to End Task Duration",
               "type": "timeseries"
             },
             {
@@ -1340,11 +1307,36 @@ dashboards:
                     ]
                   }
                 },
-                "overrides": []
+                "overrides": [
+                  {
+                    "__systemRef": "hideSeriesFrom",
+                    "matcher": {
+                      "id": "byNames",
+                      "options": {
+                        "mode": "exclude",
+                        "names": [
+                          "ocr.perform_ocr"
+                        ],
+                        "prefix": "All except:",
+                        "readOnly": true
+                      }
+                    },
+                    "properties": [
+                      {
+                        "id": "custom.hideFrom",
+                        "value": {
+                          "legend": false,
+                          "tooltip": false,
+                          "viz": true
+                        }
+                      }
+                    ]
+                  }
+                ]
               },
               "gridPos": {
-                "h": 8,
-                "w": 12,
+                "h": 14,
+                "w": 11,
                 "x": 12,
                 "y": 0
               },
@@ -1362,7 +1354,7 @@ dashboards:
                   "sort": "none"
                 }
               },
-              "pluginVersion": "12.0.1",
+              "pluginVersion": "12.0.1+security-01",
               "targets": [
                 {
                   "editorMode": "code",
@@ -1373,6 +1365,240 @@ dashboards:
                 }
               ],
               "title": "Average Celery Tasks Duration",
+              "type": "timeseries"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "PBFA97CFB590B2093"
+              },
+              "fieldConfig": {
+                "defaults": {
+                  "color": {
+                    "mode": "palette-classic"
+                  },
+                  "custom": {
+                    "axisBorderShow": false,
+                    "axisCenteredZero": false,
+                    "axisColorMode": "text",
+                    "axisLabel": "Replicas",
+                    "axisPlacement": "auto",
+                    "barAlignment": 0,
+                    "barWidthFactor": 0.6,
+                    "drawStyle": "line",
+                    "fillOpacity": 0,
+                    "gradientMode": "none",
+                    "hideFrom": {
+                      "legend": false,
+                      "tooltip": false,
+                      "viz": false
+                    },
+                    "insertNulls": false,
+                    "lineInterpolation": "linear",
+                    "lineWidth": 1,
+                    "pointSize": 5,
+                    "scaleDistribution": {
+                      "type": "linear"
+                    },
+                    "showPoints": "auto",
+                    "spanNulls": false,
+                    "stacking": {
+                      "group": "A",
+                      "mode": "none"
+                    },
+                    "thresholdsStyle": {
+                      "mode": "off"
+                    }
+                  },
+                  "mappings": [],
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "color": "green"
+                      },
+                      {
+                        "color": "red",
+                        "value": 80
+                      }
+                    ]
+                  },
+                  "unit": "short"
+                },
+                "overrides": [
+                  {
+                    "__systemRef": "hideSeriesFrom",
+                    "matcher": {
+                      "id": "byNames",
+                      "options": {
+                        "mode": "exclude",
+                        "names": [
+                          "ocr-worker-hpa - Current Replicas",
+                          "ocr-worker-hpa - Desired Replicas"
+                        ],
+                        "prefix": "All except:",
+                        "readOnly": true
+                      }
+                    },
+                    "properties": [
+                      {
+                        "id": "custom.hideFrom",
+                        "value": {
+                          "legend": false,
+                          "tooltip": false,
+                          "viz": true
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              "gridPos": {
+                "h": 14,
+                "w": 11,
+                "x": 0,
+                "y": 14
+              },
+              "id": 1,
+              "options": {
+                "legend": {
+                  "calcs": [
+                    "lastNotNull"
+                  ],
+                  "displayMode": "list",
+                  "placement": "bottom",
+                  "showLegend": true
+                },
+                "tooltip": {
+                  "hideZeros": false,
+                  "mode": "single",
+                  "sort": "none"
+                }
+              },
+              "pluginVersion": "12.0.1+security-01",
+              "targets": [
+                {
+                  "editorMode": "code",
+                  "expr": "kube_horizontalpodautoscaler_status_current_replicas{namespace=\"default\",horizontalpodautoscaler=~\"$hpa\"}",
+                  "hide": false,
+                  "legendFormat": "{{horizontalpodautoscaler}} - Current Replicas",
+                  "range": true,
+                  "refId": "B"
+                },
+                {
+                  "editorMode": "code",
+                  "expr": "kube_horizontalpodautoscaler_status_desired_replicas{namespace=\"default\",horizontalpodautoscaler=~\"$hpa\"}",
+                  "hide": false,
+                  "legendFormat": "{{horizontalpodautoscaler}} - Desired Replicas",
+                  "range": true,
+                  "refId": "C"
+                }
+              ],
+              "title": "Scaling Latency - Desired vs Current Replicas (All Workloads in default)",
+              "type": "timeseries"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "PBFA97CFB590B2093"
+              },
+              "fieldConfig": {
+                "defaults": {
+                  "color": {
+                    "mode": "palette-classic"
+                  },
+                  "custom": {
+                    "axisBorderShow": false,
+                    "axisCenteredZero": false,
+                    "axisColorMode": "text",
+                    "axisLabel": "CPU Utilization (%)",
+                    "axisPlacement": "auto",
+                    "barAlignment": 0,
+                    "barWidthFactor": 0.6,
+                    "drawStyle": "line",
+                    "fillOpacity": 0,
+                    "gradientMode": "none",
+                    "hideFrom": {
+                      "legend": false,
+                      "tooltip": false,
+                      "viz": false
+                    },
+                    "insertNulls": false,
+                    "lineInterpolation": "linear",
+                    "lineWidth": 1,
+                    "pointSize": 5,
+                    "scaleDistribution": {
+                      "type": "linear"
+                    },
+                    "showPoints": "auto",
+                    "spanNulls": false,
+                    "stacking": {
+                      "group": "A",
+                      "mode": "none"
+                    },
+                    "thresholdsStyle": {
+                      "mode": "off"
+                    }
+                  },
+                  "mappings": [],
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "color": "green"
+                      },
+                      {
+                        "color": "red",
+                        "value": 80
+                      }
+                    ]
+                  },
+                  "unit": "percent"
+                },
+                "overrides": []
+              },
+              "gridPos": {
+                "h": 14,
+                "w": 11,
+                "x": 12,
+                "y": 14
+              },
+              "id": 2,
+              "options": {
+                "legend": {
+                  "calcs": [
+                    "lastNotNull"
+                  ],
+                  "displayMode": "list",
+                  "placement": "bottom",
+                  "showLegend": true
+                },
+                "tooltip": {
+                  "hideZeros": false,
+                  "mode": "single",
+                  "sort": "none"
+                }
+              },
+              "pluginVersion": "12.0.1+security-01",
+              "targets": [
+                {
+                  "editorMode": "code",
+                  "expr": "sum(\n  label_replace(rate(container_cpu_usage_seconds_total{namespace=\"default\"}[30s]), \"workload\", \"$1\", \"pod\", \"^(.*)-[a-z0-9]+-[a-z0-9]+$\")\n) by (workload)\n/\nsum(\n  label_replace(kube_pod_container_resource_requests{namespace=\"default\", resource=\"cpu\"}, \"workload\", \"$1\", \"pod\", \"^(.*)-[a-z0-9]+-[a-z0-9]+$\")\n) by (workload)\n* 100\n",
+                  "hide": false,
+                  "legendFormat": "{{workload}}",
+                  "range": true,
+                  "refId": "A"
+                },
+                {
+                  "editorMode": "code",
+                  "expr": "kube_horizontalpodautoscaler_spec_target_metric{namespace=\"default\",horizontalpodautoscaler=~\"$hpa\",metric_name=\"cpu\",metric_target_type=\"utilization\"}",
+                  "hide": true,
+                  "legendFormat": "{{horizontalpodautoscaler}} - CPU Target (%)",
+                  "range": true,
+                  "refId": "B"
+                }
+              ],
+              "title": "CPU Utilization (All Workloads in default)",
               "type": "timeseries"
             },
             {
@@ -1441,8 +1667,11 @@ dashboards:
                       "options": {
                         "mode": "exclude",
                         "names": [
-                          "ocr-worker",
-                          "ocr-worker-hpa - Memory Target (%)"
+                          "backend",
+                          "celery-coordinator",
+                          "data-extractor",
+                          "flower",
+                          "ocr-worker"
                         ],
                         "prefix": "All except:",
                         "readOnly": true
@@ -1462,10 +1691,10 @@ dashboards:
                 ]
               },
               "gridPos": {
-                "h": 8,
-                "w": 12,
+                "h": 14,
+                "w": 11,
                 "x": 0,
-                "y": 8
+                "y": 28
               },
               "id": 3,
               "options": {
@@ -1483,7 +1712,7 @@ dashboards:
                   "sort": "none"
                 }
               },
-              "pluginVersion": "12.0.1",
+              "pluginVersion": "12.0.1+security-01",
               "targets": [
                 {
                   "editorMode": "code",
@@ -1496,237 +1725,13 @@ dashboards:
                 {
                   "editorMode": "code",
                   "expr": "kube_horizontalpodautoscaler_spec_target_metric{namespace=\"default\",horizontalpodautoscaler=~\"$hpa\",metric_name=\"memory\",metric_target_type=\"utilization\"}",
-                  "hide": false,
+                  "hide": true,
                   "legendFormat": "{{horizontalpodautoscaler}} - Memory Target (%)",
                   "range": true,
                   "refId": "B"
                 }
               ],
-              "title": "Memory Utilization vs Target (All Workloads in default)",
-              "type": "timeseries"
-            },
-            {
-              "datasource": {
-                "type": "prometheus",
-                "uid": "PBFA97CFB590B2093"
-              },
-              "fieldConfig": {
-                "defaults": {
-                  "color": {
-                    "mode": "palette-classic"
-                  },
-                  "custom": {
-                    "axisBorderShow": false,
-                    "axisCenteredZero": false,
-                    "axisColorMode": "text",
-                    "axisLabel": "CPU Utilization (%)",
-                    "axisPlacement": "auto",
-                    "barAlignment": 0,
-                    "barWidthFactor": 0.6,
-                    "drawStyle": "line",
-                    "fillOpacity": 0,
-                    "gradientMode": "none",
-                    "hideFrom": {
-                      "legend": false,
-                      "tooltip": false,
-                      "viz": false
-                    },
-                    "insertNulls": false,
-                    "lineInterpolation": "linear",
-                    "lineWidth": 1,
-                    "pointSize": 5,
-                    "scaleDistribution": {
-                      "type": "linear"
-                    },
-                    "showPoints": "auto",
-                    "spanNulls": false,
-                    "stacking": {
-                      "group": "A",
-                      "mode": "none"
-                    },
-                    "thresholdsStyle": {
-                      "mode": "off"
-                    }
-                  },
-                  "mappings": [],
-                  "thresholds": {
-                    "mode": "absolute",
-                    "steps": [
-                      {
-                        "color": "green"
-                      },
-                      {
-                        "color": "red",
-                        "value": 80
-                      }
-                    ]
-                  },
-                  "unit": "percent"
-                },
-                "overrides": [
-                  {
-                    "__systemRef": "hideSeriesFrom",
-                    "matcher": {
-                      "id": "byNames",
-                      "options": {
-                        "mode": "exclude",
-                        "names": [
-                          "ocr-worker",
-                          "ocr-worker-hpa - CPU Target (%)"
-                        ],
-                        "prefix": "All except:",
-                        "readOnly": true
-                      }
-                    },
-                    "properties": [
-                      {
-                        "id": "custom.hideFrom",
-                        "value": {
-                          "legend": false,
-                          "tooltip": false,
-                          "viz": true
-                        }
-                      }
-                    ]
-                  }
-                ]
-              },
-              "gridPos": {
-                "h": 8,
-                "w": 12,
-                "x": 12,
-                "y": 8
-              },
-              "id": 2,
-              "options": {
-                "legend": {
-                  "calcs": [
-                    "lastNotNull"
-                  ],
-                  "displayMode": "list",
-                  "placement": "bottom",
-                  "showLegend": true
-                },
-                "tooltip": {
-                  "hideZeros": false,
-                  "mode": "single",
-                  "sort": "none"
-                }
-              },
-              "pluginVersion": "12.0.1",
-              "targets": [
-                {
-                  "editorMode": "code",
-                  "expr": "sum(\n  label_replace(rate(container_cpu_usage_seconds_total{namespace=\"default\"}[30s]), \"workload\", \"$1\", \"pod\", \"^(.*)-[a-z0-9]+-[a-z0-9]+$\")\n) by (workload)\n/\nsum(\n  label_replace(kube_pod_container_resource_requests{namespace=\"default\", resource=\"cpu\"}, \"workload\", \"$1\", \"pod\", \"^(.*)-[a-z0-9]+-[a-z0-9]+$\")\n) by (workload)\n* 100\n",
-                  "hide": false,
-                  "legendFormat": "{{workload}}",
-                  "range": true,
-                  "refId": "A"
-                },
-                {
-                  "editorMode": "code",
-                  "expr": "kube_horizontalpodautoscaler_spec_target_metric{namespace=\"default\",horizontalpodautoscaler=~\"$hpa\",metric_name=\"cpu\",metric_target_type=\"utilization\"}",
-                  "legendFormat": "{{horizontalpodautoscaler}} - CPU Target (%)",
-                  "range": true,
-                  "refId": "B"
-                }
-              ],
-              "title": "CPU Utilization vs Target (All Workloads in default)",
-              "type": "timeseries"
-            },
-            {
-              "datasource": {
-                "type": "prometheus",
-                "uid": "PBFA97CFB590B2093"
-              },
-              "fieldConfig": {
-                "defaults": {
-                  "color": {
-                    "mode": "palette-classic"
-                  },
-                  "custom": {
-                    "axisBorderShow": false,
-                    "axisCenteredZero": false,
-                    "axisColorMode": "text",
-                    "axisLabel": "CPU Cores",
-                    "axisPlacement": "auto",
-                    "barAlignment": 0,
-                    "barWidthFactor": 0.6,
-                    "drawStyle": "line",
-                    "fillOpacity": 0,
-                    "gradientMode": "none",
-                    "hideFrom": {
-                      "legend": false,
-                      "tooltip": false,
-                      "viz": false
-                    },
-                    "insertNulls": false,
-                    "lineInterpolation": "linear",
-                    "lineWidth": 1,
-                    "pointSize": 5,
-                    "scaleDistribution": {
-                      "type": "linear"
-                    },
-                    "showPoints": "auto",
-                    "spanNulls": false,
-                    "stacking": {
-                      "group": "A",
-                      "mode": "none"
-                    },
-                    "thresholdsStyle": {
-                      "mode": "off"
-                    }
-                  },
-                  "mappings": [],
-                  "thresholds": {
-                    "mode": "absolute",
-                    "steps": [
-                      {
-                        "color": "green"
-                      },
-                      {
-                        "color": "red",
-                        "value": 80
-                      }
-                    ]
-                  },
-                  "unit": "short"
-                },
-                "overrides": []
-              },
-              "gridPos": {
-                "h": 8,
-                "w": 12,
-                "x": 0,
-                "y": 16
-              },
-              "id": 6,
-              "options": {
-                "legend": {
-                  "calcs": [
-                    "lastNotNull"
-                  ],
-                  "displayMode": "list",
-                  "placement": "bottom",
-                  "showLegend": true
-                },
-                "tooltip": {
-                  "hideZeros": false,
-                  "mode": "single",
-                  "sort": "none"
-                }
-              },
-              "pluginVersion": "12.0.1",
-              "targets": [
-                {
-                  "editorMode": "code",
-                  "expr": "sum(label_replace(rate(container_cpu_usage_seconds_total{namespace=\"default\"}[30s]),\"workload\",\"$1\",\"pod\",\"^(.*)-[a-z0-9]+-[a-z0-9]+$\")) by (workload)\n",
-                  "legendFormat": "{{workload}}",
-                  "range": true,
-                  "refId": "A"
-                }
-              ],
-              "title": "Total CPU Usage (All Workloads in default)",
+              "title": "Memory Utilization (All Workloads in default)",
               "type": "timeseries"
             },
             {
@@ -1790,10 +1795,10 @@ dashboards:
                 "overrides": []
               },
               "gridPos": {
-                "h": 8,
-                "w": 12,
+                "h": 14,
+                "w": 11,
                 "x": 12,
-                "y": 16
+                "y": 28
               },
               "id": 7,
               "options": {
@@ -1811,7 +1816,7 @@ dashboards:
                   "sort": "none"
                 }
               },
-              "pluginVersion": "12.0.1",
+              "pluginVersion": "12.0.1+security-01",
               "targets": [
                 {
                   "editorMode": "code",
@@ -1838,7 +1843,7 @@ dashboards:
                     "axisBorderShow": false,
                     "axisCenteredZero": false,
                     "axisColorMode": "text",
-                    "axisLabel": "Used CPU / Requested CPU",
+                    "axisLabel": "CPU Cores",
                     "axisPlacement": "auto",
                     "barAlignment": 0,
                     "barWidthFactor": 0.6,
@@ -1879,20 +1884,23 @@ dashboards:
                         "value": 80
                       }
                     ]
-                  }
+                  },
+                  "unit": "short"
                 },
                 "overrides": []
               },
               "gridPos": {
-                "h": 8,
-                "w": 12,
+                "h": 15,
+                "w": 11,
                 "x": 0,
-                "y": 24
+                "y": 42
               },
-              "id": 4,
+              "id": 6,
               "options": {
                 "legend": {
-                  "calcs": [],
+                  "calcs": [
+                    "lastNotNull"
+                  ],
                   "displayMode": "list",
                   "placement": "bottom",
                   "showLegend": true
@@ -1903,17 +1911,17 @@ dashboards:
                   "sort": "none"
                 }
               },
-              "pluginVersion": "12.0.1",
+              "pluginVersion": "12.0.1+security-01",
               "targets": [
                 {
                   "editorMode": "code",
-                  "expr": " sum(label_replace(rate(container_cpu_usage_seconds_total{namespace=\"default\"}[30s]),\"workload\",\"$1\",\"pod\",\"^(.*)-[a-z0-9]+-[a-z0-9]+$\")) by (workload) / sum(label_replace(kube_pod_container_resource_requests{resource=\"cpu\",namespace=\"default\"},\"workload\",\"$1\",\"pod\",\"^(.*)-[a-z0-9]+-[a-z0-9]+$\")) by (workload)",
-                  "legendFormat": "{{workload}} ",
+                  "expr": "sum(label_replace(rate(container_cpu_usage_seconds_total{namespace=\"default\"}[30s]),\"workload\",\"$1\",\"pod\",\"^(.*)-[a-z0-9]+-[a-z0-9]+$\")) by (workload)\n",
+                  "legendFormat": "{{workload}}",
                   "range": true,
                   "refId": "A"
                 }
               ],
-              "title": "CPU Provisioning Ratio (All Workloads in default)",
+              "title": "Total CPU Usage (All Workloads in default)",
               "type": "timeseries"
             },
             {
@@ -1976,10 +1984,10 @@ dashboards:
                 "overrides": []
               },
               "gridPos": {
-                "h": 8,
-                "w": 12,
+                "h": 15,
+                "w": 11,
                 "x": 12,
-                "y": 24
+                "y": 42
               },
               "id": 5,
               "options": {
@@ -1995,7 +2003,7 @@ dashboards:
                   "sort": "none"
                 }
               },
-              "pluginVersion": "12.0.1",
+              "pluginVersion": "12.0.1+security-01",
               "targets": [
                 {
                   "editorMode": "code",
@@ -2006,6 +2014,98 @@ dashboards:
                 }
               ],
               "title": "Memory Provisioning Ratio (All Workloads in default)",
+              "type": "timeseries"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "PBFA97CFB590B2093"
+              },
+              "fieldConfig": {
+                "defaults": {
+                  "color": {
+                    "mode": "palette-classic"
+                  },
+                  "custom": {
+                    "axisBorderShow": false,
+                    "axisCenteredZero": false,
+                    "axisColorMode": "text",
+                    "axisLabel": "Used CPU / Requested CPU",
+                    "axisPlacement": "auto",
+                    "barAlignment": 0,
+                    "barWidthFactor": 0.6,
+                    "drawStyle": "line",
+                    "fillOpacity": 0,
+                    "gradientMode": "none",
+                    "hideFrom": {
+                      "legend": false,
+                      "tooltip": false,
+                      "viz": false
+                    },
+                    "insertNulls": false,
+                    "lineInterpolation": "linear",
+                    "lineWidth": 1,
+                    "pointSize": 5,
+                    "scaleDistribution": {
+                      "type": "linear"
+                    },
+                    "showPoints": "auto",
+                    "spanNulls": false,
+                    "stacking": {
+                      "group": "A",
+                      "mode": "none"
+                    },
+                    "thresholdsStyle": {
+                      "mode": "off"
+                    }
+                  },
+                  "mappings": [],
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "color": "green"
+                      },
+                      {
+                        "color": "red",
+                        "value": 80
+                      }
+                    ]
+                  }
+                },
+                "overrides": []
+              },
+              "gridPos": {
+                "h": 12,
+                "w": 11,
+                "x": 0,
+                "y": 57
+              },
+              "id": 4,
+              "options": {
+                "legend": {
+                  "calcs": [],
+                  "displayMode": "list",
+                  "placement": "bottom",
+                  "showLegend": true
+                },
+                "tooltip": {
+                  "hideZeros": false,
+                  "mode": "single",
+                  "sort": "none"
+                }
+              },
+              "pluginVersion": "12.0.1+security-01",
+              "targets": [
+                {
+                  "editorMode": "code",
+                  "expr": " sum(label_replace(rate(container_cpu_usage_seconds_total{namespace=\"default\"}[30s]),\"workload\",\"$1\",\"pod\",\"^(.*)-[a-z0-9]+-[a-z0-9]+$\")) by (workload) / sum(label_replace(kube_pod_container_resource_requests{resource=\"cpu\",namespace=\"default\"},\"workload\",\"$1\",\"pod\",\"^(.*)-[a-z0-9]+-[a-z0-9]+$\")) by (workload)",
+                  "legendFormat": "{{workload}} ",
+                  "range": true,
+                  "refId": "A"
+                }
+              ],
+              "title": "CPU Provisioning Ratio (All Workloads in default)",
               "type": "timeseries"
             }
           ],
@@ -2063,7 +2163,7 @@ dashboards:
           "timezone": "",
           "title": "HPA Load Testing Dashboard",
           "uid": "66944961-deb9-42de-ad77-6d28ffe9d567",
-          "version": 2
+          "version": 1
         }
 service:
   # type: ClusterIP

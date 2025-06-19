@@ -16,7 +16,7 @@ rules:
       name:
         matches: "^hubble_flows_processed_total$"
         as: "hubble_flows_per_workload"
-      metricsQuery: 'sum(rate(hubble_flows_processed_total{<<.LabelMatchers>>}[1m])) by (destination_workload)'
+      metricsQuery: 'sum(rate(hubble_flows_processed_total{<<.LabelMatchers>>}[30s])) by (destination_workload)'
     - seriesQuery: 'hubble_flows_processed_total{destination_workload!="",destination_namespace!=""}'
       resources:
         overrides:
@@ -28,7 +28,7 @@ rules:
         matches: "^hubble_flows_processed_total$"
         as: "hubble_flows_per_pod"
       metricsQuery: >
-        sum(rate(hubble_flows_processed_total{<<.LabelMatchers>>}[1m])) by (destination_workload)
+        sum(rate(hubble_flows_processed_total{<<.LabelMatchers>>}[30s])) by (destination_workload)
         /
         (
           count by (destination_workload) (
@@ -48,7 +48,7 @@ rules:
       name:
         matches: "^hubble_http_request_duration_seconds_bucket$"
         as: "hubble_http_request_latency_p95"
-      metricsQuery: 'histogram_quantile(0.95, sum(rate(hubble_http_request_duration_seconds_bucket{<<.LabelMatchers>>}[1m])) by (le, destination_workload))'
+      metricsQuery: 'histogram_quantile(0.95, sum(rate(hubble_http_request_duration_seconds_bucket{<<.LabelMatchers>>}[30s])) by (le, destination_workload))'
     - seriesQuery: 'hubble_http_request_duration_seconds_bucket{source_workload!="",destination_workload!=""}'
       resources:
         overrides:
@@ -59,7 +59,7 @@ rules:
       name:
         matches: "^hubble_http_request_duration_seconds_bucket$"
         as: "hubble_http_request_latency_average"
-      metricsQuery: 'sum(rate(hubble_http_request_duration_seconds_sum{destination_namespace="default"}[1m])) by (destination_workload) / sum(rate(hubble_http_request_duration_seconds_count{destination_namespace="default"}[1m])) by (destination_workload)'
+      metricsQuery: 'sum(rate(hubble_http_request_duration_seconds_sum{destination_namespace="default"}[30s])) by (destination_workload) / sum(rate(hubble_http_request_duration_seconds_count{destination_namespace="default"}[30s])) by (destination_workload)'
     - seriesQuery: 'hubble_http_requests_total{source_workload!=""}'
       resources:
         overrides:
@@ -72,12 +72,12 @@ rules:
         as: "hubble_http_5XX_response_ratio"
       metricsQuery: >
         (
-          sum(rate(hubble_http_requests_total{<<.LabelMatchers>>, status=~"5.."}[1m])) by (destination_workload)
+          sum(rate(hubble_http_requests_total{<<.LabelMatchers>>, status=~"5.."}[30s])) by (destination_workload)
         /
-          sum(rate(hubble_http_requests_total{<<.LabelMatchers>>}[1m])) by (destination_workload)
+          sum(rate(hubble_http_requests_total{<<.LabelMatchers>>}[30s])) by (destination_workload)
         )
         or
-        sum(rate(hubble_http_requests_total{<<.LabelMatchers>>}[1m])) by (destination_workload)  * 0
+        sum(rate(hubble_http_requests_total{<<.LabelMatchers>>}[30s])) by (destination_workload)  * 0
 
     - seriesQuery: 'istio_requests_total{destination_workload!="",destination_workload_namespace!=""}'
       resources:
@@ -89,7 +89,7 @@ rules:
       name:
         matches: "^istio_requests_total$"
         as: "istio_requests_per_workload"
-      metricsQuery: 'sum(rate(istio_requests_total{<<.LabelMatchers>>}[1m])) by (destination_workload)'
+      metricsQuery: 'sum(rate(istio_requests_total{<<.LabelMatchers>>}[30s])) by (destination_workload)'
     - seriesQuery: 'istio_requests_total{destination_workload!="",destination_workload_namespace!=""}'
       resources:
         overrides:
@@ -101,7 +101,7 @@ rules:
         matches: "^istio_requests_total$"
         as: "istio_requests_per_pod"
       metricsQuery: >
-        sum(rate(istio_requests_total{<<.LabelMatchers>>}[1m])) by (destination_workload)
+        sum(rate(istio_requests_total{<<.LabelMatchers>>}[30s])) by (destination_workload)
         /
         (
           count by (destination_workload) (
@@ -121,7 +121,7 @@ rules:
       name:
         matches: "^istio_request_duration_milliseconds_bucket$"
         as: "istio_request_latency_p95"
-      metricsQuery: 'histogram_quantile(0.95, sum(rate(istio_request_duration_milliseconds_bucket{<<.LabelMatchers>>,destination_workload!="",destination_workload_namespace!="",le!~"3.6e\\+06|1.8e\\+06|600000.0|300000.0"}[1m])) by (le, destination_workload_namespace, destination_workload))'
+      metricsQuery: 'histogram_quantile(0.95, sum(rate(istio_request_duration_milliseconds_bucket{<<.LabelMatchers>>,destination_workload!="",destination_workload_namespace!="",le!~"3.6e\\+06|1.8e\\+06|600000.0|300000.0"}[30s])) by (le, destination_workload_namespace, destination_workload))'
     - seriesQuery: 'istio_request_duration_milliseconds_bucket{destination_workload!="",destination_workload_namespace!=""}'
       resources:
         overrides:
@@ -133,9 +133,9 @@ rules:
         matches: "^istio_request_duration_milliseconds_bucket$"
         as: "istio_request_latency_average"
       metricsQuery: >
-        sum(rate(istio_request_duration_milliseconds_sum{<<.LabelMatchers>>}[1m])) by (destination_workload_namespace, destination_workload)
+        sum(rate(istio_request_duration_milliseconds_sum{<<.LabelMatchers>>}[30s])) by (destination_workload_namespace, destination_workload)
         /
-        sum(rate(istio_request_duration_milliseconds_count{<<.LabelMatchers>>}[1m])) by (destination_workload_namespace, destination_workload)
+        sum(rate(istio_request_duration_milliseconds_count{<<.LabelMatchers>>}[30s])) by (destination_workload_namespace, destination_workload)
     - seriesQuery: 'istio_requests_total{destination_workload!="", destination_workload_namespace!=""}'
       resources:
         overrides:
@@ -146,15 +146,15 @@ rules:
       name:
         matches: "^istio_requests_total$"
         as: "istio_5xx_error_ratio"
-      # metricsQuery: 'sum(rate(istio_requests_total{<<.LabelMatchers>>, response_code=~"5..",destination_workload!="",destination_workload_namespace!=""}[1m])) or vector(0) / sum(rate(istio_requests_total{<<.LabelMatchers>>,destination_workload!="",destination_workload_namespace!=""}[1m])) by (destination_workload_namespace, destination_workload)'
+      # metricsQuery: 'sum(rate(istio_requests_total{<<.LabelMatchers>>, response_code=~"5..",destination_workload!="",destination_workload_namespace!=""}[30s])) or vector(0) / sum(rate(istio_requests_total{<<.LabelMatchers>>,destination_workload!="",destination_workload_namespace!=""}[30s])) by (destination_workload_namespace, destination_workload)'
       metricsQuery: >
         (
-        sum(rate(istio_requests_total{<<.LabelMatchers>>, response_code=~"5.."}[1m])) by (destination_workload_namespace, destination_workload)
+        sum(rate(istio_requests_total{<<.LabelMatchers>>, response_code=~"5.."}[30s])) by (destination_workload_namespace, destination_workload)
         /
-        sum(rate(istio_requests_total{<<.LabelMatchers>>,}[1m])) by (destination_workload_namespace, destination_workload)
+        sum(rate(istio_requests_total{<<.LabelMatchers>>,}[30s])) by (destination_workload_namespace, destination_workload)
         )
         or
-        sum(rate(istio_requests_total{<<.LabelMatchers>>}[1m])) by (destination_workload_namespace, destination_workload)  * 0
+        sum(rate(istio_requests_total{<<.LabelMatchers>>}[30s])) by (destination_workload_namespace, destination_workload)  * 0
 
 rbac:
   create: true

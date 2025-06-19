@@ -12,6 +12,7 @@ set -euo pipefail
 export PROJECT_ID=$(gcloud config get-value project)
 export CLUSTER_NAME="master-thesis-gke"
 export REGION="us-central1"
+export ZONE="us-central1-a"
 
 BUILD_TYPE=${1:-istio}
 # Istio Configuration
@@ -19,7 +20,7 @@ ISTIO_VERSION="1.22.1"
 
 # Machine Configuration
 MACHINE_TYPE="n2-highcpu-8"
-NUM_NODES="1"
+NUM_NODES="4"
 
 # ==============================================================================
 # Helper Functions
@@ -41,7 +42,7 @@ print_header "Creating a Standard GKE Cluster: $CLUSTER_NAME"
 echo "This may take several minutes..."
 
 # Check if the cluster already exists to avoid errors.
-if ! gcloud container clusters describe "$CLUSTER_NAME" --region "$REGION" &>/dev/null; then
+if ! gcloud container clusters describe "$CLUSTER_NAME" --zone "$ZONE" &>/dev/null; then
   # Enable necessary APIs for GKE.
   echo "Enabling required Google Cloud services..."
   gcloud services enable --project="$PROJECT_ID" \
@@ -53,7 +54,7 @@ if ! gcloud container clusters describe "$CLUSTER_NAME" --region "$REGION" &>/de
   if [ "$BUILD_TYPE" == "istio" ]; then
     gcloud container clusters create "$CLUSTER_NAME" \
         --project "$PROJECT_ID" \
-        --region "$REGION" \
+        --zone "$ZONE" \
         --machine-type "$MACHINE_TYPE" \
         --num-nodes "$NUM_NODES" \
         --workload-pool "${PROJECT_ID}.svc.id.goog" \
@@ -62,7 +63,7 @@ if ! gcloud container clusters describe "$CLUSTER_NAME" --region "$REGION" &>/de
    elif [ "$BUILD_TYPE" == "cilium" ]; then 
     gcloud container clusters create "$CLUSTER_NAME" \
         --project "$PROJECT_ID" \
-        --region "$REGION" \
+        --zone "$ZONE" \
         --machine-type "$MACHINE_TYPE" \
         --num-nodes "$NUM_NODES" \
         --workload-pool "${PROJECT_ID}.svc.id.goog" \
@@ -84,7 +85,7 @@ fi
 # ==============================================================================
 
 print_header "Configuring kubectl to connect to $CLUSTER_NAME"
-gcloud container clusters get-credentials "$CLUSTER_NAME" --region "$REGION" --project "$PROJECT_ID"
+gcloud container clusters get-credentials "$CLUSTER_NAME" --zone "$ZONE" --project "$PROJECT_ID"
 echo "kubectl is now configured."
 
 if [ "$BUILD_TYPE" == "cilium" ]; then
@@ -161,15 +162,15 @@ helm repo update
 # Install Prometheus
 print_header "Installing Prometheus"
 helm upgrade --install prometheus prometheus-community/prometheus \
-  --namespace monitoring --create-namespace \
-  --set server.global.scrape_interval="30s" --set server.service.type=LoadBalancer
+  --namespace monitoring --create-namespace -f prometheus-values.yaml
+  # --set server.global.scrape_interval="30s" --set server.service.type=LoadBalancer
 
 # Install Grafana
 if [ -f "grafana-values-2.yaml" ]; then
   print_header "Installing Grafana with values from grafana-values-2.yaml"
   helm upgrade --install grafana grafana/grafana \
     --namespace monitoring --create-namespace \
-    -f grafana-values-2.yaml
+    -f grafana-values-3.yaml
 else
   print_header "Installing Grafana with default values"
   echo "Warning: 'grafana-values-2.yaml' not found. Installing with defaults."

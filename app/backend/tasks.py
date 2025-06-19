@@ -1,104 +1,70 @@
-# from celery import Celery
-# import requests
-# import os
-# from time import sleep
-
-# REDIS_URL = os.getenv("REDIS_URL", "redis://redis:6379/0")
-# OCR_URL = os.getenv("OCR_URL", "http://ocr-service:9090/ocr")
-# EXTRACTOR_URL = os.getenv("EXTRACTOR_URL", "http://data-extractor-service:8000/generate")
-
-# MAX_RETRIES=6
-# TIMEOUT=10
-
-# app = Celery('tasks', broker=REDIS_URL, backend=REDIS_URL)
-
-# # @app.task
-# # def process_invoice(image_bytes):
-# #     # Step 1: OCR
-# #     ocr_response = requests.post(OCR_URL, files={'image': ('invoice.png', image_bytes)})
-# #     ocr_text = ocr_response.json().get('text')
-
-# #     # Step 2: Extractor
-# #     extractor_response = requests.post(EXTRACTOR_URL, json={'invoice_text': ocr_text})
-# #     return extractor_response.json()
-
-# @app.task
-# def process_invoice(image_bytes):
-#     for i in range(MAX_RETRIES):
-#         try:
-#             # Step 1: OCR
-#             ocr_response = requests.post(OCR_URL, files={'image': ('invoice.png', image_bytes)})
-#             ocr_response.raise_for_status()  # Raise exception for 4xx/5xx status codes
-            
-#             try:
-#                 response_json = ocr_response.json()
-#             except ValueError as e:
-#                 raise ValueError(f"Invalid JSON from OCR service: {ocr_response.text}") from e
-
-#             if 'error' in response_json:
-#                 raise ValueError(f"OCR service error: {response_json['error']}")
-#             ocr_text = response_json.get('text')
-#             if not ocr_text:
-#                 raise ValueError("No text returned from OCR service")
-
-#             # Step 2: Extractor
-#             extractor_response = requests.post(EXTRACTOR_URL, json={'invoice_text': ocr_text})
-#             extractor_response.raise_for_status()
-            
-#             try:
-#                 return extractor_response.json()
-#             except ValueError as e:
-#                 raise ValueError(f"Invalid JSON from extractor service: {extractor_response.text}") from e
-#         except requests.RequestException as e:
-#             # print(f"{i} try from {MAX_RETRIES} returned with failure")
-#             if i + 1 < MAX_RETRIES:
-#                 print(f"Failed to process invoice - retrying {i+1}/{MAX_RETRIES}")
-#                 sleep(TIMEOUT)
-#                 continue
-#             else:
-#                 print(f"Failed to process invoice: {str(e)}")
-
 from celery import Celery, chain
+import time
 import requests
 import os
-from time import sleep
+import logging
 
+# Configure basic logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
+# --- Environment Variables ---
+# Redis URL for Celery broker and backend
 REDIS_URL = os.getenv("REDIS_URL", "redis://redis:6379/0")
-EXTRACTOR_URL = os.getenv("EXTRACTOR_URL", "http://data-extractor-service:8000/generate")
+# URL for the data extraction service
+EXTRACTOR_URL = os.getenv("EXTRACTOR_URL", "http://data-extractor-service:8000/parse-invoice")
+# URL for the new metrics sidecar service. It runs in the same pod.
+METRICS_SERVER_URL = os.getenv("METRICS_SERVER_URL", "http://localhost:8001/record_duration")
 
-# Define the app and tell it about the OCR task's queue
+# --- Celery App Configuration ---
 app = Celery('tasks', broker=REDIS_URL, backend=REDIS_URL)
 app.conf.task_routes = {'ocr.perform_ocr': {'queue': 'ocr_queue'}}
 
-# This task is just for calling the extractor service
+def report_duration(duration: float):
+    """
+    Sends the calculated duration to the metrics sidecar service.
+    """
+    try:
+        # Send the duration in a short-lived, non-blocking request
+        response = requests.post(METRICS_SERVER_URL, json={'duration': duration}, timeout=1)
+        response.raise_for_status()
+        logging.info(f"Worker PID: {os.getpid()} - Successfully reported duration ({duration:.2f}s) to metrics server.")
+    except requests.RequestException as e:
+        # If the metrics server is down, log the error but don't fail the main task
+        logging.error(f"Worker PID: {os.getpid()} - Could not report duration to metrics server: {e}")
+
 @app.task
 def call_extractor(ocr_result: dict):
-    # The result from the OCR task is passed in automatically
+    """
+    Processes OCR result, reports duration, and calls the data extractor.
+    """
+    start_time = ocr_result.get('start_time')
+    if not start_time:
+        raise ValueError("Missing start_time in ocr_result")
+
+    # Immediately calculate and report the total duration of the chain so far
+    end_time = time.time()
+    duration = end_time - start_time
+    report_duration(duration)
+
+    # Check for errors from the preceding OCR task
     if 'error' in ocr_result or not ocr_result.get('text'):
         error_message = ocr_result.get('error', 'OCR returned no text')
         raise ValueError(f"OCR step failed: {error_message}")
-    
-    ocr_text = ocr_result.get('text')
-    print("OCR step successful, proceeding to data extraction.")
 
-    # You can keep your retry logic here if you want
+    ocr_text = ocr_result.get('text')
+    logging.info(f"Worker PID: {os.getpid()} - OCR step successful, proceeding to data extraction.")
+
+    # Call the final data extractor service
     extractor_response = requests.post(EXTRACTOR_URL, json={'invoice_text': ocr_text})
     extractor_response.raise_for_status()
     return extractor_response.json()
 
-
-# This is no longer a task itself, but a function that creates the chain
-def process_invoice_pipeline(image_bytes: bytes):
+def process_invoice_pipeline(image_bytes: bytes, start_time: float):
     """
-    Creates and returns a Celery chain.
-    1. The 'ocr.perform_ocr' task is sent to the 'ocr_queue'.
-    2. Its result is automatically passed to the 'call_extractor' task.
+    Constructs the Celery chain for processing an invoice.
     """
-    # Note: We use .s() which is a "signature", creating a task blueprint
     task_chain = chain(
-        # The first task to run
-        app.signature('ocr.perform_ocr', args=[image_bytes]),
-        # The second task, which receives the result of the first
+        app.signature('ocr.perform_ocr', args=[image_bytes, start_time]),
         call_extractor.s()
     )
     return task_chain

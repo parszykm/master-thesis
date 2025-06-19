@@ -2,7 +2,7 @@ global:
   imagePullPolicy: Always #IfNotPresent
 
 istio:
-  enabled: true
+  enabled: false
 
 cilium:
   enabled: false
@@ -10,7 +10,7 @@ cilium:
 backend:
   image:
     repository: parszyk/backend
-    tag: arch-amd64-flower
+    tag: arch-amd64-test
   replicas: 1
   port: 8080
   nodePort: 30030
@@ -22,11 +22,13 @@ backend:
 worker:
   image:
     repository: parszyk/backend
-    tag: arch-amd64-flower
+    tag: arch-amd64-test
   replicas: 1
   hpa:
     enabled: true
-    maxReplicas: 5
+    maxReplicas: 10
+  metrics:
+    port: 8000
 
 redis:
   image:
@@ -41,7 +43,7 @@ ocrService:
   port: 9090
   hpa:
     enabled: true
-    maxReplicas: 10
+    maxReplicas: 25
 
 dataExtractor:
   image:
