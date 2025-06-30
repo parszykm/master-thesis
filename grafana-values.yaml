@@ -1,6 +1,5 @@
-adminPassword: "admin-secret" # Set a secure password for Grafana admin user
+adminPassword: "admin-secret"
 
-# Configure Prometheus data source
 datasources:
   datasources.yaml:
     apiVersion: 1
@@ -12,7 +11,6 @@ datasources:
       isDefault: true
       editable: true
 
-# Enable dashboard provisioning
 dashboardProviders:
   dashboardproviders.yaml:
     apiVersion: 1
@@ -26,7 +24,6 @@ dashboardProviders:
       options:
         path: /var/lib/grafana/dashboards/default
 
-# Define dashboards via ConfigMap
 dashboards:
   default:
     hubble-metrics:
@@ -789,7 +786,6 @@ service:
   type: ClusterIP
   port: 80
 
-# Enable persistence (optional, for storing Grafana configuration)
 persistence:
   enabled: true
   size: 10Gi

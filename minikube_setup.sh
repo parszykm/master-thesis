@@ -20,21 +20,6 @@ elif [ "$BUILD_TYPE" = "cilium" ]; then
   helm repo update
   helm install cilium cilium/cilium \
     --namespace kube-system --create-namespace -f cilium-values.yaml
-    # --set operator.replicas=1 \
-    # --set hubble.enabled=true \
-    # --set hubble.relay.enabled=true \
-    # --set hubble.ui.enabled=true \
-    # --set hubble.metrics.enabled="{dns,drop,tcp:labelsContext=source_ip\,source_namespace\,source_workload\,destination_ip\,destination_namespace\,destination_workload\,traffic_direction,flow:labelsContext=source_ip\,source_namespace\,source_workload\,destination_ip\,destination_namespace\,destination_workload\,traffic_direction,port-distribution:labelsContext=source_ip\,source_namespace\,source_workload\,destination_ip\,destination_namespace\,destination_workload\,traffic_direction,icmp,httpV2:exemplars=true;labelsContext=source_ip\,source_namespace\,source_workload\,destination_ip\,destination_namespace\,destination_workload\,traffic_direction}"
-    # # --set hubble.relay.prometheus.enabled=true \
-    # --set operator.prometheus.enabled=true \
-    # --set hubble.metrics.enableOpenMetrics=true \
-    # --set  hubble.serviceMonitor.enabled=true \
-    # --set  hubble.serviceMonitor.enabled=true \
-    # --set hubble.prometheus.enabled=true \
-    # --set  hubble.prometheus.serviceMonitor.enabled=true \
-  #  --set operator.prometheus.enabled=true \
-  #  --set prometheus.enabled=true \
-  #  --set prometheus.metricsService=true
 fi
 
 # Monitoring

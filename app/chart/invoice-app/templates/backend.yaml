@@ -41,22 +41,6 @@ spec:
               cpu: "500m"
               memory: "512Mi"
 ---
-# apiVersion: v1
-# kind: Service
-# metadata:
-#   name: backend-service
-#   namespace: {{ .Release.Namespace }}
-# spec:
-#   type: NodePort
-#   selector:
-#     app: backend
-#   ports:
-#     - port: {{ .Values.backend.servicePort }}
-#       targetPort: {{ .Values.backend.port }}
-#       protocol: TCP
-#       nodePort: {{ .Values.backend.nodePort | default 32000 }}
-
-
 apiVersion: v1
 kind: Service
 metadata:
@@ -137,7 +121,7 @@ spec:
           name: hubble_flows_per_pod
         target:
           type: Value
-          value: "60" # scale if number of requests per pod is graeter than 30 per second
+          value: "60" 
 {{- end }}
 {{- if .Values.istio.enabled }}
     - type: Object
@@ -150,6 +134,6 @@ spec:
           name: istio_requests_per_pod
         target:
           type: Value
-          value: "30" # scale if number of requests per pod is graeter than 30 per second
+          value: "30"
 {{- end }}
 {{- end }}

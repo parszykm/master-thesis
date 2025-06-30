@@ -1,4 +1,3 @@
-# prometheus-adapter.yaml
 prometheus:
   url: http://prometheus-server.monitoring.svc
   port: 80
@@ -146,7 +145,6 @@ rules:
       name:
         matches: "^istio_requests_total$"
         as: "istio_5xx_error_ratio"
-      # metricsQuery: 'sum(rate(istio_requests_total{<<.LabelMatchers>>, response_code=~"5..",destination_workload!="",destination_workload_namespace!=""}[30s])) or vector(0) / sum(rate(istio_requests_total{<<.LabelMatchers>>,destination_workload!="",destination_workload_namespace!=""}[30s])) by (destination_workload_namespace, destination_workload)'
       metricsQuery: >
         (
         sum(rate(istio_requests_total{<<.LabelMatchers>>, response_code=~"5.."}[30s])) by (destination_workload_namespace, destination_workload)

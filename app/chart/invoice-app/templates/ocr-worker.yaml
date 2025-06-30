@@ -19,14 +19,12 @@ spec:
     spec:
       containers:
       - name: ocr
-        image: {{ .Values.ocrService.image.repository }}:{{ .Values.ocrService.image.tag }}
+        image: {{ .Values.ocrWorker.image.repository }}:{{ .Values.ocrWorker.image.tag }}
         imagePullPolicy: {{ .Values.global.imagePullPolicy }}
         command: ["celery", "-A", "ocr_worker", "worker", "-E", "--loglevel=info", "-Q", "ocr_queue", "--concurrency=1"]
         env:
         - name: REDIS_URL
           value: redis://redis:{{ .Values.redis.port }}/0
-        # ports:
-        # - containerPort: {{ .Values.ocrService.port }}
         resources:
           requests:
             cpu: "300m"
@@ -35,33 +33,7 @@ spec:
             cpu: "500m"
             memory: "1024Mi"
 ---
-# apiVersion: autoscaling/v2
-# kind: HorizontalPodAutoscaler
-# metadata:
-#   name: ocr-worker-hpa
-#   namespace: default
-# spec:
-#   scaleTargetRef:
-#     apiVersion: apps/v1
-#     kind: Deployment
-#     name: ocr-worker
-#   minReplicas: 1
-#   maxReplicas: {{ .Values.ocrService.hpa.maxReplicas | default 3}}
-#   metrics:
-#     - type: Resource
-#       resource:
-#         name: cpu
-#         target:
-#           type: Utilization
-#           averageUtilization: {{ .Values.ocrService.hpa.cpuTarget | default 50 }} # Scale if CPU usage exceeds 80%
-#     - type: Resource
-#       resource:
-#         name: memory
-#         target:
-#           type: Utilization
-#           averageUtilization: {{ .Values.ocrService.hpa.memoryTarget | default 80 }} # Scale if memory usage exceeds 80%
-
-{{- if .Values.ocrService.hpa.enabled }}
+{{- if .Values.ocrWorker.hpa.enabled }}
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
@@ -73,7 +45,7 @@ spec:
     kind: Deployment
     name: ocr-worker
   minReplicas: 1
-  maxReplicas: {{ .Values.ocrService.hpa.maxReplicas | default 1}}
+  maxReplicas: {{ .Values.ocrWorker.hpa.maxReplicas | default 1}}
   metrics:
 {{- if .Values.cilium.enabled }}
     - type: Object
@@ -86,9 +58,8 @@ spec:
           name: hubble_flows_per_pod
         target:
           type: Value
-          value: "2000m"  # Scale up if flows per pod exceed 5 (5000 milli). Coordinator works in conccurency level 8 so value c.a. 8 times greater than scaling the ocr-worker
+          value: "2000m"  
 {{- end }}
-# It is impossible to scale based on numbers of requests as Istio doesnt support protocols different from HTTPS/gRPC
 {{- if .Values.istio.enabled }}
     - type: Object
       object:
@@ -100,6 +71,6 @@ spec:
           name: istio_requests_per_pod
         target:
           type: Value
-          value: "15"  # Scale up if flows per pod exceed 20
+          value: "15"
 {{- end }}
 {{- end }}

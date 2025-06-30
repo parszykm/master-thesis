@@ -19,7 +19,7 @@ backend:
     enabled: true
     maxReplicas: 5
 
-worker:
+celeryCoordinator:
   image:
     repository: parszyk/backend
     tag: arch-amd64-test
@@ -36,7 +36,7 @@ redis:
     tag: "7"
   port: 6379
 
-ocrService:
+ocrWorker:
   image:
     repository: parszyk/ocr-service
     tag: arch-amd64

@@ -1,44 +1,3 @@
-# ---
-# apiVersion: apps/v1
-# kind: Deployment
-# metadata:
-#   name: data-extractor
-# spec:
-#   replicas: 1
-#   selector:
-#     matchLabels:
-#       app: data-extractor
-#   template:
-#     metadata:
-#       labels:
-#         app: data-extractor
-#       annotations:
-# {{- if .Values.istio.enabled }}
-#         "sidecar.istio.io/inject": "true"
-# {{- end }}
-#     spec:
-#       containers:
-#       - name: flask-api
-#         image: {{ .Values.dataExtractor.image.repository }}:{{ .Values.dataExtractor.image.tag }}
-#         ports:
-#         - containerPort: {{ .Values.dataExtractor.port }}
-#         env:
-#         - name: OLLAMA_URL
-#           value: "http://ollama-service:80"
-# ---
-# apiVersion: v1
-# kind: Service
-# metadata:
-#   name: data-extractor-service
-# spec:
-#   selector:
-#     app: data-extractor
-#   ports:
-#     - protocol: TCP
-#       port: {{ .Values.dataExtractor.port }}
-#       targetPort: {{ .Values.dataExtractor.port }}
-#   type: ClusterIP
-
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -113,13 +72,13 @@ spec:
         name: cpu
         target:
           type: Utilization
-          averageUtilization: {{ .Values.ocrService.hpa.cpuTarget | default 80 }} # Scale if CPU usage exceeds 80%
+          averageUtilization: {{ .Values.ocrWorker.hpa.cpuTarget | default 80 }} 
     - type: Resource
       resource:
         name: memory
         target:
           type: Utilization
-          averageUtilization: {{ .Values.ocrService.hpa.memoryTarget | default 80 }} # Scale if memory usage exceeds 80%
+          averageUtilization: {{ .Values.ocrWorker.hpa.memoryTarget | default 80 }} 
 {{- if .Values.cilium.enabled }}
     - type: Object
       object:
@@ -131,7 +90,7 @@ spec:
           name: hubble_flows_per_pod
         target:
           type: Value
-          value: "2000m"  # Scale up if flows per pod exceed 0.15 (150 milli)
+          value: "2000m" 
     - type: Object
       object:
         describedObject:
@@ -142,7 +101,7 @@ spec:
           name: hubble_http_request_latency_average
         target:
           type: Value
-          value: "60m"  # Scale up if 95th percentile latency exceeds 10ms
+          value: "60m" 
     - type: Object
       object:
         describedObject:
@@ -153,7 +112,7 @@ spec:
           name: hubble_http_5XX_response_ratio
         target:
           type: Value
-          value: "0.1"  # Scale up if 5xx error ratio exceeds 10%
+          value: "0.1"  
 {{- end }}
 {{- if .Values.istio.enabled }}
     - type: Object
@@ -166,7 +125,7 @@ spec:
           name: istio_requests_per_pod
         target:
           type: Value
-          value: "2000m"  # Scale up if flows per pod exceed 2 (2000 milli)
+          value: "2000m" 
     - type: Object
       object:
         describedObject:
@@ -177,7 +136,7 @@ spec:
           name: istio_request_latency_average
         target:
           type: Value
-          value: "60m"  # Scale up if 95th percentile latency exceeds 60ms
+          value: "60m" 
     - type: Object
       object:
         describedObject:
@@ -188,6 +147,6 @@ spec:
           name: istio_5xx_error_ratio
         target:
           type: Value
-          value: "0.01"  # Scale up if 5xx error ratio exceeds 1%
+          value: "0.01"  
 {{- end }}
 {{- end }}

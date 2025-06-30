@@ -1,69 +1,10 @@
-# # FILE: helm_chart/templates/flower-deployment.yaml
-
-# apiVersion: apps/v1
-# kind: Deployment
-# metadata:
-#   name: flower
-#   namespace: default # Or the namespace where your app runs
-# spec:
-#   replicas: 1
-#   selector:
-#     matchLabels:
-#       app: flower
-#   template:
-#     metadata:
-#       labels:
-#         app: flower
-#     spec:
-#       containers:
-#       - name: flower
-#         # This points to your custom image that contains your application code
-#         image: parszyk/flower:latest
-#         # This command starts Flower by loading your main Celery app,
-#         # which allows it to discover all registered tasks from all workers.
-#         command:
-#           - "celery"
-#           - "-A"
-#           - "backend.tasks"
-#           - "flower"
-#           - "--broker=redis://redis:6379/0"
-#           - "--port=5555"
-#         ports:
-#         - name: http
-#           containerPort: 5555
-#         resources:
-#           requests:
-#             cpu: "100m"
-#             memory: "128Mi"
-#           limits:
-#             cpu: "200m"
-#             memory: "256Mi"
-# ---
-# apiVersion: v1
-# kind: Service
-# metadata:
-#   name: flower-service
-#   namespace: default # Same namespace as the deployment
-#   # Add this annotation so Prometheus can discover it
-#   annotations:
-#     prometheus.io/scrape: 'true'
-#     prometheus.io/port: '5555'
-# spec:
-#   selector:
-#     app: flower
-#   ports:
-#     - protocol: TCP
-#       port: 5555
-#       targetPort: http
-#   type: ClusterIP
-
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: flower
 spec:
-  replicas: {{ .Values.worker.replicas }}
+  replicas: {{ .Values.celeryCoordinator.replicas }}
   selector:
     matchLabels:
       app: flower
@@ -78,9 +19,8 @@ spec:
     spec:
       containers:
       - name: worker
-        image: {{ .Values.worker.image.repository }}:{{ .Values.worker.image.tag }}
+        image: {{ .Values.celeryCoordinator.image.repository }}:{{ .Values.celeryCoordinator.image.tag }}
         imagePullPolicy: {{ .Values.global.imagePullPolicy }}
-        # command: ["celery", "-A", "tasks", "worker", "--loglevel=info"]
         command: ["celery", "-A", "tasks", "flower", "--port=5555"]
         ports:
         - name: http

@@ -5,10 +5,10 @@ import random
 DATA_DIR = "data"
 
 class InvoiceUser(HttpUser):
-    wait_time = between(0.5, 2)  # Simulate variable user wait time
+    wait_time = between(0.5, 2)  
 
     def on_start(self):
-        # Load image file paths once per user
+        
         self.images = [os.path.join(DATA_DIR, f) for f in os.listdir(DATA_DIR) if f.lower().endswith((".jpg", ".jpeg", ".png"))]
 
     @task
@@ -28,7 +28,7 @@ class InvoiceUser(HttpUser):
                     response.failure(f"Upload failed: {response.status_code}")
 
     def poll_status(self, task_id):
-        for _ in range(5):  # Poll a few times to simulate client checking status
+        for _ in range(5):  
             with self.client.get(f"/status/{task_id}", catch_response=True) as response:
                 if response.status_code == 200:
                     status = response.json().get("status")

@@ -1,5 +1,5 @@
 #!/bin/bash
-# Exit immediately if a command exits with a non-zero status.
+
 set -euo pipefail
 
 # ==============================================================================
@@ -8,17 +8,14 @@ set -euo pipefail
 # This script sets up a GKE cluster, installs Cilium using its CLI,
 # and then installs Istio using the istioctl command-line tool.
 
-# GKE Cluster Configuration
 export PROJECT_ID=$(gcloud config get-value project)
 export CLUSTER_NAME="master-thesis-gke"
 export REGION="us-central1"
 export ZONE="us-central1-a"
 
 BUILD_TYPE=${1:-istio}
-# Istio Configuration
 ISTIO_VERSION="1.22.1"
 
-# Machine Configuration
 MACHINE_TYPE="n2-highcpu-8"
 NUM_NODES="4"
 
@@ -26,7 +23,6 @@ NUM_NODES="4"
 # Helper Functions
 # ==============================================================================
 
-# Function to print a formatted header message.
 print_header() {
   echo
   echo "=============================================================================="
@@ -41,16 +37,12 @@ print_header() {
 print_header "Creating a Standard GKE Cluster: $CLUSTER_NAME"
 echo "This may take several minutes..."
 
-# Check if the cluster already exists to avoid errors.
 if ! gcloud container clusters describe "$CLUSTER_NAME" --zone "$ZONE" &>/dev/null; then
-  # Enable necessary APIs for GKE.
   echo "Enabling required Google Cloud services..."
   gcloud services enable --project="$PROJECT_ID" \
     container.googleapis.com \
     gkehub.googleapis.com
 
-  # Create a standard GKE cluster. We will install Cilium manually.
-  # The --enable-ip-alias is important for Cilium to work correctly in chained mode.
   if [ "$BUILD_TYPE" == "istio" ]; then
     gcloud container clusters create "$CLUSTER_NAME" \
         --project "$PROJECT_ID" \
@@ -95,7 +87,6 @@ if [ "$BUILD_TYPE" == "cilium" ]; then
 
     print_header "Installing Cilium with the Cilium CLI"
 
-    # Download the Cilium CLI
     if ! command -v cilium &> /dev/null; then
         echo "Cilium CLI not found. Downloading..."
         CILIUM_CLI_VERSION=$(curl -s https://raw.githubusercontent.com/cilium/cilium-cli/main/stable.txt)
@@ -109,7 +100,6 @@ if [ "$BUILD_TYPE" == "cilium" ]; then
         echo "Cilium CLI is already installed."
     fi
 
-    # Install Cilium into the cluster
     if [ -f "cilium-values.yaml" ]; then
     print_header "Installing Cilium with values from cilium-values.yaml"
     cilium install --set cluster.name=$CLUSTER_NAME -f cilium-values.yaml
@@ -119,7 +109,6 @@ if [ "$BUILD_TYPE" == "cilium" ]; then
     cilium install --set cluster.name=$CLUSTER_NAME
     fi
 
-    # Enable Hubble for observability
     print_header "Enabling Hubble UI"
     cilium hubble enable --ui
 elif [ "$BUILD_TYPE" == "istio" ]; then
@@ -128,7 +117,6 @@ elif [ "$BUILD_TYPE" == "istio" ]; then
     # ==============================================================================
     print_header "Installing Istio $ISTIO_VERSION with istioctl"
 
-    # Download and extract Istio
     if [ ! -d "istio-${ISTIO_VERSION}" ]; then
         echo "Downloading Istio v${ISTIO_VERSION}..."
         curl -L https://istio.io/downloadIstio | ISTIO_VERSION=$ISTIO_VERSION sh -
@@ -136,14 +124,11 @@ elif [ "$BUILD_TYPE" == "istio" ]; then
         echo "Istio v${ISTIO_VERSION} directory already exists. Skipping download."
     fi
 
-    # Add istioctl to the path for this script's execution
     export PATH=$PWD/istio-$ISTIO_VERSION/bin:$PATH
     echo "istioctl added to PATH."
 
-    # Install Istio using the 'default' profile
     istioctl install --set profile=default -y --set values.global.platform=gke
 
-    # Label the default namespace for automatic sidecar injection
     print_header "Enabling Istio sidecar injection for the 'default' namespace"
     kubectl label namespace default istio-injection=enabled --overwrite
 fi
@@ -163,7 +148,6 @@ helm repo update
 print_header "Installing Prometheus"
 helm upgrade --install prometheus prometheus-community/prometheus \
   --namespace monitoring --create-namespace -f prometheus-values.yaml
-  # --set server.global.scrape_interval="30s" --set server.service.type=LoadBalancer
 
 # Install Grafana
 if [ -f "grafana-values-2.yaml" ]; then
